@@ -17,6 +17,7 @@ Per frame, recreation vs reference, both at analysis size (640 px wide):
 | `dhue` | mean LAB a/b colour distance (0 = same colours) | same |
 | `hist` | colour-histogram intersection (1 = same colour mix) | `training/score_recreation.py` |
 | `edge_f1` | agreement of edge maps = line work / silhouettes (1 = same) | `training/score_recreation.py` |
+| `grad_ssim_holdout` | SSIM of Sobel gradient-magnitude images. **Reported, never tuned against**: a recreation that traces Canny edges to please `edge_f1` cannot fake it | `training/score_recreation.py` |
 | `frame_score` | `0.4*ssim + 0.25*hist + 0.25*edge_f1 + 0.10*(1 - min(dhue/20, 1))` | `training/score_recreation.py` |
 
 A number means nothing alone, so **calibration comes first**: `training/calibrate_scores.py` scores known

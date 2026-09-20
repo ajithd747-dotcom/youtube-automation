@@ -53,7 +53,7 @@ def main():
         sc = json.loads((HERE / "runs" / D.name / run / "scores.json").read_text(encoding="utf-8"))
         results[spec] = sc["overall"]
         print(f"shot {a.shot} frames {lo}-{hi} ({hi - lo}f)  grid {spec:>5s}: frame_score={sc['overall']['frame_score']:.4f} ssim={sc['overall']['ssim']:.3f} "
-              f"hist={sc['overall']['hist']:.3f} edge_f1={sc['overall']['edge_f1']:.3f} dhue={sc['overall']['dhue']}  coverage={sc['coverage']:.0%}")
+              f"hist={sc['overall']['hist']:.3f} edge_f1={sc['overall']['edge_f1']:.3f} holdout_grad_ssim={sc['overall']['grad_ssim_holdout']:.3f} dhue={sc['overall']['dhue']}  coverage={sc['coverage']:.0%}")
     return results
 
 

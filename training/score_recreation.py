@@ -66,10 +66,21 @@ def score_frame_pair(ref, rec, mask=None):
     else:
         f1 = 2 * prec * reca / (prec + reca) if prec + reca > 0 else 0.0
 
+    # HOLDOUT (not part of frame_score, never tuned against): structure similarity of Sobel gradient magnitudes. A recreation that only
+    # traces Canny edges to please edge_f1 cannot fake this one, because it looks at edge strength and shape, not a binary edge map.
+    def grad_mag(g):
+        g = cv2.GaussianBlur(g, (0, 0), 1.2)
+        return cv2.magnitude(cv2.Sobel(g, cv2.CV_32F, 1, 0), cv2.Sobel(g, cv2.CV_32F, 0, 1))
+    mr, mc = grad_mag(gr), grad_mag(gc)
+    top = max(float(mr.max()), 1.0)
+    _, gmap = structural_similarity(np.clip(mr / top * 255, 0, 255).astype(np.uint8), np.clip(mc / top * 255, 0, 255).astype(np.uint8), full=True, data_range=255)
+    grad_ssim = float(gmap[mask].mean())
+
     dhue = float(np.abs(lab_r[:, :, 1:].astype(int) - lab_c[:, :, 1:].astype(int))[mask].mean())
     colour = 1.0 - min(dhue / 20.0, 1.0)
     score = WEIGHTS["ssim"] * max(ssim, 0.0) + WEIGHTS["hist"] * hist + WEIGHTS["edge_f1"] * f1 + WEIGHTS["colour"] * colour
-    return {"ssim": round(ssim, 4), "hist": round(hist, 4), "edge_f1": round(f1, 4), "dhue": round(dhue, 3), "frame_score": round(score, 4)}, 1.0 - smap
+    return {"ssim": round(ssim, 4), "hist": round(hist, 4), "edge_f1": round(f1, 4), "dhue": round(dhue, 3), "frame_score": round(score, 4),
+            "grad_ssim_holdout": round(grad_ssim, 4)}, 1.0 - smap
 
 
 def crop_to_content(img, rect):
@@ -150,7 +161,7 @@ def main():
     shots = {str(k): {"frames": len(v), "frame_score": round(float(np.mean([x["frame_score"] for x in v])), 4),
                       "ssim": round(float(np.mean([x["ssim"] for x in v])), 4), "hist": round(float(np.mean([x["hist"] for x in v])), 4),
                       "edge_f1": round(float(np.mean([x["edge_f1"] for x in v])), 4)} for k, v in sorted(per_shot.items())}
-    overall = {k: round(float(np.mean([x[k] for x in frames])), 4) for k in ("frame_score", "ssim", "hist", "edge_f1")}
+    overall = {k: round(float(np.mean([x.get(k, 0.0) for x in frames])), 4) for k in ("frame_score", "ssim", "hist", "edge_f1", "grad_ssim_holdout")}
     overall["dhue"] = round(float(np.mean([x["dhue"] for x in frames if x["dhue"] is not None])), 3) if any(x["dhue"] is not None for x in frames) else None
     coverage = round(sum(1 for x in frames if not x.get("missing")) / max(len(frames), 1), 4)
     worst = sorted(frames, key=lambda r: r["frame_score"])[:8]

@@ -3,7 +3,7 @@ id: exact-colour-vertex-plane-layout
 name: Exact-colour layout from a measured grid - vertex-coloured plane in Workbench
 category: materials
 kind: technique
-status: reference
+status: verified
 applies_to:
 - any
 when_to_use: Rebuilding the colour layout (sky/mid/low bands, gradients, light falloff) of a reference frame in Blender with
@@ -59,4 +59,4 @@ Each doubling of resolution bought about +0.05; edge_f1 stayed ~0 because there 
 
 ## Evidence
 
-training/PROGRESS.md, entry 2026-09-20 rung 1. Runs: training/runs/<slug>/level1_shotNN_<grid>/ (local, gitignored). Confirmed on three shots (sign, cake close-up, character); needs a second video before promotion to verified.
+training/PROGRESS.md, entry 2026-09-20 rung 1. Runs: training/runs/<slug>/level1_shotNN_<grid>/ (local, gitignored). Confirmed on three shots of Fragrant Flower and two of Blue Box (0.534 and 0.561 at 32x18), so promoted to verified under the SPEC rule (a second video confirms).

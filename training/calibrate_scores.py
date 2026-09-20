@@ -93,12 +93,12 @@ def main():
 
     table = {}
     print(f"{D.name}: {len(idx)} sample frames, other video for the unrelated rung: {O.name}\n")
-    print(f"{'degradation':28s} {'frame_score':>11s} {'ssim':>7s} {'hist':>7s} {'edge_f1':>8s} {'dhue':>7s}")
+    print(f"{'degradation':28s} {'frame_score':>11s} {'ssim':>7s} {'hist':>7s} {'edge_f1':>8s} {'holdout':>8s} {'dhue':>7s}")
     for kind in KINDS:
         v = results[kind]
-        table[kind] = {k: round(float(np.mean([x[k] for x in v])), 4) for k in ("frame_score", "ssim", "hist", "edge_f1", "dhue")}
+        table[kind] = {k: round(float(np.mean([x[k] for x in v])), 4) for k in ("frame_score", "ssim", "hist", "edge_f1", "grad_ssim_holdout", "dhue")}
         t = table[kind]
-        print(f"{kind:28s} {t['frame_score']:11.4f} {t['ssim']:7.3f} {t['hist']:7.3f} {t['edge_f1']:8.3f} {t['dhue']:7.2f}")
+        print(f"{kind:28s} {t['frame_score']:11.4f} {t['ssim']:7.3f} {t['hist']:7.3f} {t['edge_f1']:8.3f} {t['grad_ssim_holdout']:8.3f} {t['dhue']:7.2f}")
     (D / "calibration.json").write_text(json.dumps({"n_frames": int(len(idx)), "weights": SR.WEIGHTS, "table": table}, indent=1), encoding="utf-8")
     problems = []
     if table["identical"]["frame_score"] < 0.999:

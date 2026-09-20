@@ -28,3 +28,30 @@ second video confirms it).
 
 **Next rung (2): line work and silhouettes** -- measured edge/contour polylines as Blender curves or Grease Pencil
 strokes over the colour layout, then flat colour regions. Target: edge_f1 from ~0 to >0.4 and frame_score past 0.75.
+
+## 2026-09-20 -- rung 2 (line work) on two videos, and the holdout metric
+
+Measured Canny contours -> flat ribbon quads in Blender over the rung-1 colour layout (training/blender_level2.py).
+Added `grad_ssim_holdout` to the scorer because rung 2 traces the same Canny edges the scorer measures: without a holdout the
+big `edge_f1` gain would have been the metric agreeing with itself. Calibration on the holdout: blur sigma 25 = 0.556, flat
+colour = 0.441, unrelated video = 0.320.
+
+| video / shot | rung 1 score / holdout | rung 2 score / holdout | rung 2 edge_f1 | rung 2 ssim vs rung 1 |
+|---|---|---|---|---|
+| Fragrant Flower 27 (character) | 0.630 / 0.550 | 0.828 / 0.584 | 0.87 | 0.744 -> 0.709 |
+| Blue Box 77 (character) | 0.534 / 0.374 | 0.739 / 0.451 | 0.91 | 0.605 -> 0.531 |
+| Blue Box 1 (no face) | 0.561 / 0.507 | 0.746 / 0.557 | 0.90 | 0.671 -> 0.588 |
+
+Sweep on Fragrant Flower 27 (canny, min length, half-width): frame_score 0.785 to 0.851, holdout only 0.561 to 0.584. The best
+frame_score (canny 90,180 -> 0.851) is the scorer's own Canny thresholds, not a better recreation; the best holdout is the
+thinnest line (0.5 px -> 0.584). Chosen: canny 60,120, min length 10, half-width 0.5.
+
+What it taught: line work gives the big edge_f1 gain but ssim FALLS every time (lines a pixel off, ink too dark), and the
+remaining gap is flat cel fills and shading, not lines. Skills: `exact-colour-vertex-plane-layout` promoted to verified
+(second video confirmed); `measured-edge-ribbon-line-layer` saved as reference.
+
+**Honest scope note:** rungs 1-2 reconstruct what the pixels are (measured colour grid + traced edges). That is the fidelity
+baseline, not creation from scratch. The from-scratch part -- the skill the agent must learn -- is reproducing the same look
+from parametric Blender constructs driven by the shot script's `blender_directives` (key/fill lights, world, camera path,
+depth of field, glare/vignette, particles), with no reference pixels in the loop. Rung 3 should be that, scored by the same
+frame metrics plus feature-level checks (camera path, exposure curve, palette).
