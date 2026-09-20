@@ -1,0 +1,2 @@
+OSError: Python file "D:\youtube" could not be opened: No such file or directory
+Error: argument has no '.blend' file extension, not using as new file, exiting! D:\youtube automation\blender_agent\automation\blender_agent\work\recreate_tutorial\gui_test.py

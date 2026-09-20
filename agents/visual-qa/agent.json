@@ -1,0 +1,22 @@
+{
+  "name": "visual-qa",
+  "title": "Visual Qa",
+  "role": "Checks every planned shot before the long render (still render -> exposure/haze/clipping metrics + subject-in-frame test) and auto-applies fixes (exposure bias, fog scale) to the shot plan",
+  "kind": "algorithmic",
+  "inputs": [
+    "task"
+  ],
+  "outputs": [
+    "result"
+  ],
+  "tools": [],
+  "skill_categories": [
+    "check",
+    "fix",
+    "workflow"
+  ],
+  "quality_gates": [
+    "python agents/cli.py verify visual-qa"
+  ],
+  "llm": false
+}

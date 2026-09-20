@@ -1,0 +1,128 @@
+{
+  "title": "test_kinetic_shorts",
+  "style": "kinetic",
+  "segments": [
+    [
+      "hook",
+      "",
+      "Did you know most people waste two hours a day on their phone? That is over 700 hours a year. Here is the simple fix: turn on focus mode and batch your notifications. Try it for one week and watch your productivity double."
+    ],
+    [
+      "outro",
+      "",
+      "Hit like and subscribe for more tips."
+    ]
+  ],
+  "shots": [
+    {
+      "style": "kinetic",
+      "bg": "#101826",
+      "camera": "push_in",
+      "objects": [
+        {
+          "type": "text",
+          "pos": [
+            0.0,
+            -0.05
+          ],
+          "color": "#ffffff",
+          "enter": "pop_in",
+          "delay": 0,
+          "loop": "none",
+          "size": 0.12,
+          "text": "2 hrs wasted"
+        },
+        {
+          "type": "icon",
+          "pos": [
+            0.0,
+            0.5
+          ],
+          "color": "#ff4d6d",
+          "enter": "pop_in",
+          "delay": 0.2,
+          "loop": "spin",
+          "size": 0.35,
+          "icon": "phone"
+        },
+        {
+          "type": "text",
+          "pos": [
+            0.0,
+            -0.35
+          ],
+          "color": "#ffffff",
+          "enter": "pop_in",
+          "delay": 0.6,
+          "loop": "none",
+          "size": 0.12,
+          "text": "Focus Mode"
+        },
+        {
+          "type": "rect",
+          "pos": [
+            0.0,
+            0.1
+          ],
+          "color": "#3bceac",
+          "enter": "slide_in_left",
+          "delay": 0.8,
+          "loop": "none",
+          "size": [
+            0.8,
+            0.02
+          ]
+        }
+      ],
+      "custom": "A subtle pulse effect on the phone icon emphasizes the waste of time."
+    },
+    {
+      "style": "kinetic",
+      "bg": "#101826",
+      "camera": "push_in",
+      "objects": [
+        {
+          "type": "rect",
+          "pos": [
+            0.0,
+            -0.4
+          ],
+          "color": "#ff4d6d",
+          "enter": "slide_in_bottom",
+          "delay": 0,
+          "loop": "none",
+          "size": [
+            0.8,
+            0.12
+          ]
+        },
+        {
+          "type": "text",
+          "pos": [
+            0.0,
+            0.73
+          ],
+          "color": "#ffffff",
+          "enter": "slide_in_bottom",
+          "delay": 0.2,
+          "loop": "none",
+          "size": 0.15,
+          "text": "Like & Subscribe"
+        },
+        {
+          "type": "icon",
+          "pos": [
+            0.55,
+            0.0
+          ],
+          "color": "#ffd23f",
+          "enter": "slide_in_right",
+          "delay": 0.4,
+          "loop": "none",
+          "size": 0.2,
+          "icon": "heart"
+        }
+      ]
+    }
+  ]
+}

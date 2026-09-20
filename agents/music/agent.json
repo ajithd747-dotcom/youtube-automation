@@ -1,0 +1,62 @@
+{
+  "name": "music",
+  "title": "Music agent",
+  "kind": "hybrid",
+  "role": "Plans and produces background music: mood/tempo/key from the script and shot plan, real instruments via FluidSynth (or a numpy synth), risers/impacts on the cuts, reference matching, ducking under narration, loudness mastering",
+  "inputs": [
+    "shot plan + durations",
+    "script text",
+    "optional reference audio"
+  ],
+  "outputs": [
+    "music wav (44.1 kHz stereo, -14 LUFS)",
+    "music plan json",
+    "comparison report"
+  ],
+  "tools": [
+    {
+      "name": "analyze",
+      "file": "tools/analyze.py",
+      "description": "tempo, key, spectrum, energy curve, hits, LUFS of any audio/video"
+    },
+    {
+      "name": "synth",
+      "file": "tools/synth.py",
+      "description": "numpy pads/bass/plucks/bells/drums/risers/impacts/reverb"
+    },
+    {
+      "name": "compose",
+      "file": "tools/compose.py",
+      "description": "MusicPlan -> layered arrangement"
+    },
+    {
+      "name": "midi_render",
+      "file": "tools/midi_render.py",
+      "description": "MusicPlan -> MIDI -> FluidSynth + GeneralUser GS soundfont"
+    },
+    {
+      "name": "mix",
+      "file": "tools/mix.py",
+      "description": "wav I/O, sidechain ducking, loudnorm, spectral EQ matching, dynamics matching"
+    }
+  ],
+  "skill_categories": [
+    "mood",
+    "arrangement",
+    "sync",
+    "mixing",
+    "reference-matching",
+    "tools"
+  ],
+  "quality_gates": [
+    "python agents/cli.py verify music",
+    "compare(): score < 1.0 vs reference",
+    "final LUFS within 1 dB of target"
+  ],
+  "external_software": [
+    "FluidSynth 2.6.1 (LGPL) in agents/tools_bin",
+    "GeneralUser GS soundfont (permissive licence) in agents/tools_bin",
+    "ffmpeg"
+  ],
+  "llm": true
+}

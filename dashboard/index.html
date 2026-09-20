@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Video Review Dashboard</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --panel: #ffffff; --line: #e2e5ea; --text: #1a1f2b; --muted: #6a7385;
+    --accent: #3b6df0; --ok: #1f9d55; --warn: #c77d0a; --bad: #d63b3b; --chip: #eef1f6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0f1218; --panel: #171b24; --line: #272d3a; --text: #e6e9f0; --muted: #8b95a8;
+            --accent: #6f95ff; --ok: #3ec77b; --warn: #e5a23a; --bad: #ef6b6b; --chip: #212734; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+  header h1 { font-size: 16px; margin: 0; font-weight: 650; }
+  header .sub { color: var(--muted); font-size: 12px; }
+  header .spacer { flex: 1; }
+  button, select, input, textarea { font: inherit; color: inherit; }
+  button { background: var(--chip); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .layout { display: grid; grid-template-columns: 340px 1fr; gap: 16px; padding: 16px; max-width: 1500px; margin: 0 auto; }
+  aside { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; height: calc(100vh - 90px); display: flex; flex-direction: column; position: sticky; top: 66px; }
+  .filters { padding: 10px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+  .filters input[type=search], .filters select { width: 100%; padding: 7px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { padding: 3px 10px; border-radius: 999px; background: var(--chip); border: 1px solid var(--line); font-size: 12px; cursor: pointer; user-select: none; }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  #list { overflow: auto; flex: 1; }
+  details { border-bottom: 1px solid var(--line); }
+  summary { padding: 8px 12px; font-weight: 600; font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; cursor: pointer; }
+  .item { display: grid; grid-template-columns: 96px 1fr; gap: 10px; padding: 8px 12px; cursor: pointer; border-left: 3px solid transparent; }
+  .item:hover { background: var(--chip); }
+  .item.sel { background: var(--chip); border-left-color: var(--accent); }
+  .thumb { width: 96px; height: 54px; border-radius: 6px; background: #000; object-fit: cover; }
+  .item .nm { font-weight: 550; word-break: break-word; }
+  .item .mt { color: var(--muted); font-size: 12px; display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--muted); }
+  .dot.approved { background: var(--ok); } .dot.rejected { background: var(--bad); } .dot.pending { background: var(--warn); }
+  main { min-width: 0; display: grid; gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+  .stage { background: #000; border-radius: 12px; display: flex; justify-content: center; align-items: center; min-height: 240px; overflow: hidden; }
+  video { max-width: 100%; max-height: 68vh; background: #000; }
+  .empty { color: var(--muted); padding: 60px; text-align: center; }
+  h2 { font-size: 15px; margin: 0 0 8px; }
+  .facts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .fact { background: var(--chip); border: 1px solid var(--line); padding: 2px 9px; border-radius: 6px; font-size: 12px; color: var(--muted); }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .check { display: flex; gap: 8px; align-items: baseline; padding: 3px 0; }
+  .check .i { width: 18px; text-align: center; font-weight: 700; }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 3px; }
+  input[type=text], textarea { width: 100%; padding: 7px 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; }
+  textarea { min-height: 70px; resize: vertical; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; background: var(--bg); }
+  .seg button.on.approved { background: var(--ok); color: #fff; } .seg button.on.rejected { background: var(--bad); color: #fff; } .seg button.on.pending { background: var(--warn); color: #fff; }
+  pre { margin: 0; padding: 10px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; white-space: pre-wrap; word-break: break-all; font: 12px/1.5 ui-monospace, Consolas, monospace; }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .hint { color: var(--muted); font-size: 12px; }
+  kbd { background: var(--chip); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: 11px; }
+  #saved { color: var(--ok); font-size: 12px; opacity: 0; transition: opacity .3s; }
+  #saved.show { opacity: 1; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; padding: 12px; } aside { position: static; height: 360px; } .cols { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Video review</h1><span class="sub" id="counts"></span>
+  <span class="spacer"></span>
+  <label class="row hint" style="margin:0"><input type="checkbox" id="autonext"> autoplay next</label>
+  <button id="refresh" title="Rescan folders">Refresh</button>
+</header>
+
+<div class="layout">
+  <aside>
+    <div class="filters">
+      <input type="search" id="q" placeholder="Search videos…">
+      <div class="chips" id="statusChips"></div>
+      <select id="group"><option value="">All groups</option></select>
+    </div>
+    <div id="list"></div>
+  </aside>
+
+  <main>
+    <div class="stage" id="stage"><div class="empty">Select a video from the list.</div></div>
+    <div class="card" id="info" hidden>
+      <h2 id="fname"></h2>
+      <div class="hint" id="frel"></div>
+      <div class="facts" id="facts"></div>
+    </div>
+    <div class="cols" id="panels" hidden>
+      <div class="card">
+        <h2>Pre-upload checks</h2>
+        <div id="checks"></div>
+        <p class="hint" style="margin:10px 0 0">Reminder: disclose realistic AI-generated content in YouTube Studio and expect policy scrutiny of mass-produced or repetitive uploads.</p>
+      </div>
+      <div class="card">
+        <h2>Review</h2>
+        <div class="row">
+          <div class="seg" id="statusBtns">
+            <button data-s="pending" class="pending">Pending</button>
+            <button data-s="approved" class="approved">Approve</button>
+            <button data-s="rejected" class="rejected">Reject</button>
+          </div>
+          <span id="saved">Saved</span>
+        </div>
+        <label for="title">YouTube title</label><input type="text" id="title" maxlength="100">
+        <label for="desc">Description</label><textarea id="desc"></textarea>
+        <label for="notes">Review notes (private)</label><textarea id="notes" placeholder="What to fix before uploading…"></textarea>
+      </div>
+    </div>
+    <div class="card" id="uploadCard" hidden>
+      <h2>Upload command <span class="hint">(nothing is uploaded from this page)</span></h2>
+      <pre id="cmd"></pre>
+      <div class="row" style="margin-top:8px"><button class="primary" id="copy">Copy command</button>
+        <span class="hint">Run it in a terminal from <b>D:\youtube automation</b>. Default privacy is private.</span></div>
+      <p class="hint" style="margin:10px 0 0">Shortcuts: <kbd>Space</kbd> play/pause · <kbd>←</kbd><kbd>→</kbd> seek 5s · <kbd>N</kbd>/<kbd>P</kbd> next/prev · <kbd>A</kbd> approve · <kbd>R</kbd> reject · <kbd>F</kbd> fullscreen</p>
+    </div>
+  </main>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let videos = [], review = {}, selected = null, statusFilter = 'all', saveTimer = null;
+const collapsedByDefault = new Set(['Blender segments', 'Reference']);
+
+const fmtDur = s => { s = Math.round(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+const fmtSize = b => b > 1e9 ? (b / 1e9).toFixed(2) + ' GB' : (b / 1e6).toFixed(1) + ' MB';
+const fmtDate = t => new Date(t * 1000).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
+const rv = v => review[v.rel] || { status: 'pending', title: '', description: '', notes: '' };
+const orient = v => v.height > v.width ? 'vertical' : 'landscape';
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+async function load(keepSelection = true) {
+  const r = await (await fetch('/api/videos')).json();
+  videos = r.videos; review = r.review;
+  const groups = [...new Set(videos.map(v => v.group))];
+  const gsel = $('#group'), cur = gsel.value;
+  gsel.innerHTML = '<option value="">All groups</option>' + groups.map(g => `<option>${esc(g)}</option>`).join('');
+  gsel.value = groups.includes(cur) ? cur : '';
+  if (!keepSelection || !videos.find(v => v.id === selected)) selected = null;
+  renderList(); updateCounts();
+}
+
+function updateCounts() {
+  const c = { approved: 0, rejected: 0, pending: 0 };
+  videos.forEach(v => c[rv(v).status]++);
+  $('#counts').textContent = `${videos.length} videos · ${c.approved} approved · ${c.pending} pending · ${c.rejected} rejected`;
+}
+
+function visible() {
+  const q = $('#q').value.trim().toLowerCase(), g = $('#group').value;
+  return videos.filter(v => (!g || v.group === g) && (statusFilter === 'all' || rv(v).status === statusFilter)
+    && (!q || (v.name + ' ' + v.title).toLowerCase().includes(q)));
+}
+
+function renderChips() {
+  $('#statusChips').innerHTML = ['all', 'pending', 'approved', 'rejected'].map(s =>
+    `<span class="chip ${statusFilter === s ? 'on' : ''}" data-s="${s}">${s[0].toUpperCase() + s.slice(1)}</span>`).join('');
+}
+
+function renderList() {
+  renderChips();
+  const vis = visible(), byGroup = {};
+  vis.forEach(v => (byGroup[v.group] = byGroup[v.group] || []).push(v));
+  const order = ['Created', 'Recreations (benchmarks)', 'Tests & previews', 'Blender segments', 'Reference'];
+  const open = new Set([...document.querySelectorAll('#list details[open]')].map(d => d.dataset.g));
+  const first = !$('#list').children.length;
+  $('#list').innerHTML = order.filter(g => byGroup[g]).map(g => {
+    const isOpen = first ? !collapsedByDefault.has(g) : open.has(g);
+    return `<details data-g="${esc(g)}" ${isOpen || $('#q').value ? 'open' : ''}><summary>${esc(g)} (${byGroup[g].length})</summary>` +
+      byGroup[g].map(v => `<div class="item ${v.id === selected ? 'sel' : ''}" data-id="${v.id}">
+        <img class="thumb" loading="lazy" src="/thumb/${v.id}" alt="">
+        <div><div class="nm">${esc(v.name)}</div>
+        <div class="mt"><span class="dot ${rv(v).status}"></span>${fmtDur(v.duration)} · ${orient(v)} ${v.height}p</div></div></div>`).join('') + '</details>';
+  }).join('') || '<div class="empty">No videos match.</div>';
+}
+
+function select(id) {
+  const v = videos.find(x => x.id === id); if (!v) return;
+  selected = id;
+  const wasPlaying = false;
+  $('#stage').innerHTML = `<video id="player" controls autoplay preload="metadata" src="/video/${v.id}"></video>`;
+  const p = $('#player');
+  p.addEventListener('ended', () => { if ($('#autonext').checked) step(1); });
+  $('#info').hidden = $('#panels').hidden = $('#uploadCard').hidden = false;
+  $('#fname').textContent = v.name; $('#frel').textContent = v.rel;
+  $('#facts').innerHTML = [fmtDur(v.duration), `${v.width}×${v.height}`, `${v.fps} fps`, v.vcodec, v.audio ? 'audio ✓' : 'no audio', fmtSize(v.size), fmtDate(v.mtime), v.group]
+    .map(f => `<span class="fact">${esc(f)}</span>`).join('');
+  const r = rv(v);
+  $('#title').value = r.title || v.title; $('#desc').value = r.description; $('#notes').value = r.notes;
+  renderStatus(); renderChecks(v); renderCmd(); renderList();
+  document.querySelector('.item.sel')?.scrollIntoView({ block: 'nearest' });
+}
+
+function renderStatus() {
+  const s = rv(videos.find(v => v.id === selected)).status;
+  document.querySelectorAll('#statusBtns button').forEach(b => b.classList.toggle('on', b.dataset.s === s));
+}
+
+function renderChecks(v) {
+  const vertical = v.height > v.width, short = Math.min(v.width, v.height);
+  const items = [
+    [v.audio ? 'ok' : 'bad', v.audio ? 'Has an audio track' : 'No audio track'],
+    [short >= 720 ? 'ok' : 'warn', short >= 720 ? `Resolution ${v.width}×${v.height} is fine` : `Low resolution ${v.width}×${v.height} (looks like a draft/preview)`],
+    [/test|preview|^_/i.test(v.name) ? 'warn' : 'ok', /test|preview|^_/i.test(v.name) ? 'Filename looks like a test/preview file' : 'Not marked as a test file'],
+    [v.duration >= 3 ? 'ok' : 'warn', `Length ${fmtDur(v.duration)}`],
+    [vertical && v.duration <= 180 ? 'ok' : 'warn', vertical ? (v.duration <= 180 ? 'Vertical and ≤ 3 min: eligible for Shorts' : 'Vertical but over 3 min: will not count as a Short') : 'Landscape: regular video (not a Short)'],
+    [v.fps >= 24 ? 'ok' : 'warn', `${v.fps} fps${v.fps < 24 ? ' (low; drafts render at 12)' : ''}`],
+  ];
+  const ic = { ok: '✓', warn: '!', bad: '✕' };
+  $('#checks').innerHTML = items.map(([k, t]) => `<div class="check"><span class="i ${k}">${ic[k]}</span><span>${esc(t)}</span></div>`).join('');
+}
+
+function renderCmd() {
+  const v = videos.find(x => x.id === selected); if (!v) return;
+  const q = s => "'" + String(s).replace(/'/g, "''") + "'";
+  $('#cmd').textContent = `python upload/youtube_upload.py ${q(v.rel.replace(/\//g, '\\'))} ${q($('#title').value)} ${q($('#desc').value)}`;
+}
+
+function save() {
+  const v = videos.find(x => x.id === selected); if (!v) return;
+  const entry = { status: rv(v).status, title: $('#title').value, description: $('#desc').value, notes: $('#notes').value };
+  review[v.rel] = entry;
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    await fetch('/api/review', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ rel: v.rel, entry }) });
+    $('#saved').classList.add('show'); setTimeout(() => $('#saved').classList.remove('show'), 1200);
+  }, 300);
+  renderCmd(); updateCounts();
+}
+
+function setStatus(s) {
+  const v = videos.find(x => x.id === selected); if (!v) return;
+  review[v.rel] = { ...rv(v), status: s, title: $('#title').value, description: $('#desc').value, notes: $('#notes').value };
+  renderStatus(); save(); renderList();
+}
+
+function step(d) {
+  const vis = visible(); if (!vis.length) return;
+  const i = vis.findIndex(v => v.id === selected);
+  select(vis[(i + d + vis.length) % vis.length].id);
+}
+
+$('#list').addEventListener('click', e => { const it = e.target.closest('.item'); if (it) select(it.dataset.id); });
+$('#statusChips').addEventListener('click', e => { const c = e.target.closest('.chip'); if (c) { statusFilter = c.dataset.s; renderList(); } });
+$('#statusBtns').addEventListener('click', e => { const b = e.target.closest('button'); if (b) setStatus(b.dataset.s); });
+['#q', '#group'].forEach(s => $(s).addEventListener('input', renderList));
+['#title', '#desc', '#notes'].forEach(s => $(s).addEventListener('input', save));
+$('#refresh').addEventListener('click', () => load());
+$('#copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('#cmd').textContent); $('#copy').textContent = 'Copied ✓'; }
+  catch { const r = document.createRange(); r.selectNodeContents($('#cmd')); getSelection().removeAllRanges(); getSelection().addRange(r); $('#copy').textContent = 'Selected: press Ctrl+C'; }
+  setTimeout(() => $('#copy').textContent = 'Copy command', 1500);
+});
+try { $('#autonext').checked = localStorage.getItem('autonext') === '1'; } catch {}
+$('#autonext').addEventListener('change', e => { try { localStorage.setItem('autonext', e.target.checked ? '1' : '0'); } catch {} });
+
+document.addEventListener('keydown', e => {
+  if (/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) || e.ctrlKey || e.metaKey || e.altKey) return;
+  const p = $('#player'), k = e.key.toLowerCase();
+  if (k === 'n') step(1); else if (k === 'p') step(-1);
+  else if (k === 'a') setStatus('approved'); else if (k === 'r') setStatus('rejected');
+  else if (k === 'f' && p) (document.fullscreenElement ? document.exitFullscreen() : p.requestFullscreen());
+  else if (p && k === 'arrowright') p.currentTime += 5; else if (p && k === 'arrowleft') p.currentTime -= 5;
+  else if (p && k === ' ') { e.preventDefault(); p.paused ? p.play() : p.pause(); }
+});
+
+load(false).then(() => { const first = visible()[0]; if (first) select(first.id); });
+</script>
+</body>
+</html>

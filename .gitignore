@@ -1,0 +1,72 @@
+# ---------------------------------------------------------------- secrets
+# 22 live API keys live here. Never commit. If this was ever pushed, rotate all of them.
+.env
+.env.*
+*.key
+*.pem
+**/credentials.json
+**/token.json
+
+# ---------------------------------------------------------------- other people's content
+# Downloaded reference clips used for study and benchmarking. They are someone else's
+# copyrighted work - fine to keep locally as reference, not ours to republish.
+reference vedios/
+reference videos/
+
+# Frame-by-frame rebuilds of those reference clips. Same reason: these exist to measure the
+# pipeline, not to distribute. The code that produces them is tracked; the output is not.
+recreate/out/
+recreate/cels/
+recreate/bg/
+recreate/ref_analysis/
+
+# ---------------------------------------------------------------- large binaries
+# GitHub hard-rejects >100 MB and warns over 50 MB. These all rebuild from the scripts.
+*.blend
+*.blend1
+build/paper_heart/models/
+build/paper_heart/tex/
+build/paper_heart/vendor/
+
+# ---------------------------------------------------------------- render output
+renders/
+video/
+dashboard/.thumbs/
+**/out/
+**/_final/
+**/_sbs/
+**/_bisect/
+**/_texture_test/
+
+# ---------------------------------------------------------------- media
+*.mp4
+*.mkv
+*.mov
+*.webm
+*.wav
+*.mp3
+*.exr
+# keep small documentation images, drop bulk frame dumps
+**/f_*.png
+**/s_*.png
+
+# ---------------------------------------------------------------- python / os
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.log
+.DS_Store
+Thumbs.db
+
+# ---------------------------------------------------------------- third-party binaries
+# Redistributable but not ours to vendor, and all re-downloadable. See agents/ docs.
+agents/tools_bin/
+*.sf2
+*.dll
+*.exe
+*.zip
+
+# large generated knowledge dumps - regenerate from the Blender API
+blender_agent/knowledge/api_dump.jsonl
+blender_agent/knowledge/index.jsonl

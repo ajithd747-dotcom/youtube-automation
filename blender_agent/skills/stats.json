@@ -1,0 +1,99 @@
+{
+ "camera-framing-safe-area": {
+  "uses": 0,
+  "ok": 0,
+  "failed": 0,
+  "runs": [],
+  "verified_at": "2026-09-20 13:06",
+  "verify_detail": "ok"
+ },
+ "robot-character-rig": {
+  "uses": 0,
+  "ok": 0,
+  "failed": 0,
+  "runs": [],
+  "verified_at": "2026-09-20 13:06",
+  "verify_detail": "ok"
+ },
+ "title-3d-glow-text": {
+  "uses": 0,
+  "ok": 0,
+  "failed": 0,
+  "runs": [],
+  "verified_at": "2026-09-20 13:06",
+  "verify_detail": "ok"
+ },
+ "particle-burst-fireworks": {
+  "uses": 0,
+  "ok": 0,
+  "failed": 0,
+  "runs": [],
+  "verified_at": "2026-09-20 13:06",
+  "verify_detail": "ok"
+ },
+ "studio-softbox-stripe-world": {
+  "uses": 0,
+  "ok": 0,
+  "failed": 0,
+  "runs": [],
+  "verified_at": "2026-09-20 13:06",
+  "verify_detail": "ok"
+ },
+ "volumetric-fog-box": {
+  "uses": 0,
+  "ok": 0,
+  "failed": 0,
+  "runs": [],
+  "verify_failed_at": "2026-09-19 19:22",
+  "verify_detail": "ok",
+  "verified_at": "2026-09-20 13:06"
+ },
+ "easing-and-overshoot-pop-in": {
+  "uses": 0,
+  "ok": 0,
+  "failed": 0,
+  "runs": [],
+  "verified_at": "2026-09-20 13:06",
+  "verify_detail": "ok"
+ },
+ "walk-cycle-profile": {
+  "uses": 0,
+  "ok": 0,
+  "failed": 0,
+  "runs": [],
+  "verified_at": "2026-09-20 13:06",
+  "verify_detail": "ok"
+ },
+ "cloth-flag-wind": {
+  "uses": 0,
+  "ok": 0,
+  "failed": 0,
+  "runs": [],
+  "verified_at": "2026-09-20 13:06",
+  "verify_detail": "ok"
+ },
+ "rigid-body-launch-release": {
+  "uses": 0,
+  "ok": 0,
+  "failed": 0,
+  "runs": [],
+  "verified_at": "2026-09-20 13:07",
+  "verify_detail": "ok"
+ },
+ "rigid-body-render-prestep": {
+  "uses": 0,
+  "ok": 0,
+  "failed": 0,
+  "runs": [],
+  "verified_at": "2026-09-20 13:07",
+  "verify_detail": "ok"
+ },
+ "soft-body-jelly": {
+  "uses": 0,
+  "ok": 0,
+  "failed": 0,
+  "runs": [],
+  "verified_at": "2026-09-20 13:07",
+  "verify_detail": "ok"
+ }
+}

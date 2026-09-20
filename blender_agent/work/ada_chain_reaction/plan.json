@@ -1,0 +1,134 @@
+{
+  "title": "ada_chain_reaction",
+  "style": "cinematic",
+  "segments": [
+    [
+      "hook",
+      "",
+      "Meet Ada, a curious little robot with one big idea."
+    ],
+    [
+      "segment",
+      "",
+      "Every morning she walks through her workshop, dreaming up the perfect chain reaction."
+    ],
+    [
+      "segment",
+      "",
+      "First, she polishes her treasures: glass, gold, and a crystal that glows."
+    ],
+    [
+      "segment",
+      "",
+      "Then comes the classic trick. One small push, and a winding line of dominoes topples, one after another."
+    ],
+    [
+      "segment",
+      "",
+      "The last one launches a heavy steel ball, and a whole wall of crates comes crashing down."
+    ],
+    [
+      "segment",
+      "",
+      "A gust of wind unfurls her banner, proud and rippling under the open sky."
+    ],
+    [
+      "segment",
+      "",
+      "At night, fireworks paint the darkness and light up the lake."
+    ],
+    [
+      "segment",
+      "",
+      "Even the jelly joins the party, wobbling and bouncing with pure energy."
+    ],
+    [
+      "segment",
+      "",
+      "Physics is the art of making motion beautiful. Ada calls it her favorite kind of magic."
+    ],
+    [
+      "outro",
+      "",
+      "Thanks for watching! Hit like and subscribe for more animated adventures."
+    ]
+  ],
+  "shots": [
+    {
+      "style": "cinematic",
+      "recipe": "robot_intro",
+      "mood": "sunset",
+      "title": "Meet Ada",
+      "params": {}
+    },
+    {
+      "style": "cinematic",
+      "recipe": "workshop_walk",
+      "mood": "studio",
+      "title": "",
+      "params": {
+        "v": 2
+      }
+    },
+    {
+      "style": "cinematic",
+      "recipe": "glass_showcase",
+      "mood": "studio",
+      "title": "Treasures",
+      "params": {}
+    },
+    {
+      "style": "cinematic",
+      "recipe": "domino_run",
+      "mood": "sunset",
+      "title": "One Small Push",
+      "params": {}
+    },
+    {
+      "style": "cinematic",
+      "recipe": "crate_smash",
+      "mood": "sunset",
+      "title": "Crash!",
+      "params": {
+        "v": 2
+      }
+    },
+    {
+      "style": "cinematic",
+      "recipe": "cloth_banner",
+      "mood": "day",
+      "title": "",
+      "params": {}
+    },
+    {
+      "style": "cinematic",
+      "recipe": "fireworks",
+      "mood": "night",
+      "title": "Lake Fireworks",
+      "params": {}
+    },
+    {
+      "style": "cinematic",
+      "recipe": "jelly_pit",
+      "mood": "neon",
+      "title": "Jelly Party",
+      "params": {
+        "v": 2
+      }
+    },
+    {
+      "style": "cinematic",
+      "recipe": "robot_intro",
+      "mood": "neon",
+      "title": "Physics is Art",
+      "params": {}
+    },
+    {
+      "style": "cinematic",
+      "recipe": "finale_confetti",
+      "mood": "night",
+      "title": "Thanks for watching",
+      "params": {}
+    }
+  ]
+}

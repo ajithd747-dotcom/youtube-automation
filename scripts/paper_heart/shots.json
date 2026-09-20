@@ -1,0 +1,963 @@
+{
+  "title": "Paper Heart",
+  "logline": "A man buried in work and a woman buried in exam pressure meet eyes at a crossing; both let go of what was crushing them and the wind draws a heart from her scattered papers.",
+  "fps": 24,
+  "n_frames": 5136,
+  "duration": 214.0,
+  "resolution": [
+    1920,
+    1080
+  ],
+  "dialogue": false,
+  "style": "3d-toon-anime",
+  "style_notes": "VRoid characters, Mixamo motion, toon ramp + inverted-hull outline. Characters stepped on 2s (3s for exhaustion beats), camera and FX on 1s. Bloom/grade/speed-lines in ffmpeg, never the compositor.",
+  "runtime_rationale": "Set by one rule: the audience must want him to take that call, and want her to keep those papers, before either lets go. At 60s each world got 11s - enough to state the pressure, not to feel it. 3:30 also matches the arc of an emotional instrumental, which matters because this cuts to music, not action.",
+  "acts": [
+    {
+      "name": "The grind (his world)",
+      "start": 1,
+      "end": 1152,
+      "palette": [
+        "#2B3440",
+        "#4A5A6A",
+        "#7FD4E8",
+        "#C9D6DE"
+      ]
+    },
+    {
+      "name": "The weight (her world)",
+      "start": 1153,
+      "end": 2304,
+      "palette": [
+        "#3A2C22",
+        "#8A6A45",
+        "#D9A441",
+        "#F2EDE4"
+      ]
+    },
+    {
+      "name": "The crossing",
+      "start": 2305,
+      "end": 3072,
+      "palette": [
+        "#4A5A6A",
+        "#D9A441"
+      ]
+    },
+    {
+      "name": "The contact and the stop",
+      "start": 3073,
+      "end": 3936,
+      "palette": [
+        "#9A9A9A",
+        "#FFD9A0",
+        "#FF9E7A"
+      ]
+    },
+    {
+      "name": "Letting go",
+      "start": 3937,
+      "end": 4464,
+      "palette": [
+        "#D9A441",
+        "#FFD9A0",
+        "#FF9E7A"
+      ]
+    },
+    {
+      "name": "The paper heart",
+      "start": 4465,
+      "end": 5136,
+      "palette": [
+        "#FFD9A0",
+        "#FF9E7A",
+        "#FF6B8A",
+        "#FFF6EC"
+      ]
+    }
+  ],
+  "shots": [
+    {
+      "idx": 0,
+      "id": "S01",
+      "start": 1,
+      "end": 72,
+      "n": 72,
+      "dur": 3.0,
+      "kind": "insert",
+      "step": 1,
+      "camera": "macro-locked",
+      "desc": "Wall clock second hand, extreme macro, cold fluorescent. Mechanical steps, no ease."
+    },
+    {
+      "idx": 1,
+      "id": "S02",
+      "start": 73,
+      "end": 168,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "establish",
+      "step": 3,
+      "camera": "whip-pan-lr",
+      "desc": "Whip-pan across open-plan office, nobody looks up. Smear f0100-0120."
+    },
+    {
+      "idx": 2,
+      "id": "S03",
+      "start": 169,
+      "end": 264,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "character",
+      "step": 3,
+      "camera": "push-in-3pct",
+      "desc": "HIM at desk, phone on shoulder, three monitors. Almost nothing moves: fingers, blink f0230, cursor on 1s."
+    },
+    {
+      "idx": 3,
+      "id": "S04",
+      "start": 265,
+      "end": 336,
+      "n": 72,
+      "dur": 3.0,
+      "kind": "insert",
+      "step": 1,
+      "camera": "static",
+      "desc": "Unread count climbing 47/48/51. Endless scrolling task list."
+    },
+    {
+      "idx": 4,
+      "id": "S05",
+      "start": 337,
+      "end": 432,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "montage",
+      "step": 3,
+      "camera": "locked",
+      "desc": "The days repeat. Same desk and pose, light morning->afternoon->evening->night. Four 24-frame dissolves."
+    },
+    {
+      "idx": 5,
+      "id": "S06",
+      "start": 433,
+      "end": 504,
+      "n": 72,
+      "dur": 3.0,
+      "kind": "insert",
+      "step": 1,
+      "camera": "static",
+      "desc": "Cold untouched lunch. Three coffee rings on a report."
+    },
+    {
+      "idx": 6,
+      "id": "S07",
+      "start": 505,
+      "end": 600,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "character",
+      "step": 2,
+      "camera": "close",
+      "desc": "He rubs his eyes, catches his reflection in the dark monitor, holds it a beat too long."
+    },
+    {
+      "idx": 7,
+      "id": "S08",
+      "start": 601,
+      "end": 696,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "insert",
+      "step": 1,
+      "camera": "close",
+      "desc": "Phone buzzes face-down. Seven missed calls from SUPERIOR. He has been drowning and unreachable."
+    },
+    {
+      "idx": 8,
+      "id": "S09",
+      "start": 697,
+      "end": 792,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "character",
+      "step": 2,
+      "camera": "close",
+      "desc": "He silently rehearses. A worn folded page of notes in his fist. The pitch he has waited months to give - this is what makes hanging up cost something."
+    },
+    {
+      "idx": 9,
+      "id": "S10",
+      "start": 793,
+      "end": 888,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "key",
+      "step": 2,
+      "camera": "medium",
+      "desc": "THE CALL COMES. He sits bolt upright, straightens his tie for a phone call, breathes once."
+    },
+    {
+      "idx": 10,
+      "id": "S11",
+      "start": 889,
+      "end": 984,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "character",
+      "step": 2,
+      "camera": "close",
+      "desc": "He answers, nods, listens hard. First hope in his face all act."
+    },
+    {
+      "idx": 11,
+      "id": "S12",
+      "start": 985,
+      "end": 1080,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "character",
+      "step": 2,
+      "camera": "tracking",
+      "desc": "On the call through corridor, lift, lobby. Speed-ramped, world blurred - the call is all that exists."
+    },
+    {
+      "idx": 12,
+      "id": "S13",
+      "start": 1081,
+      "end": 1152,
+      "n": 72,
+      "dur": 3.0,
+      "kind": "character",
+      "step": 2,
+      "camera": "medium",
+      "desc": "Out of the revolving door into low golden street light, phone still at his ear."
+    },
+    {
+      "idx": 13,
+      "id": "S14",
+      "start": 1153,
+      "end": 1224,
+      "n": 72,
+      "dur": 3.0,
+      "kind": "insert",
+      "step": 1,
+      "camera": "macro-locked",
+      "desc": "Wall calendar macro. Dozens of red X's marching to a circled exam date. Mirror of S01."
+    },
+    {
+      "idx": 14,
+      "id": "S15",
+      "start": 1225,
+      "end": 1320,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "establish",
+      "step": 2,
+      "camera": "slow-pan",
+      "desc": "Her room: towers of prep books, paper everywhere, a failing fan. Cramped where his office was vast."
+    },
+    {
+      "idx": 15,
+      "id": "S16",
+      "start": 1321,
+      "end": 1416,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "character",
+      "step": 3,
+      "camera": "push-in-3pct",
+      "desc": "HER at desk, highlighter in teeth, same dark circles. Same push-in as S03. Blink f1382, anxious pen tap."
+    },
+    {
+      "idx": 16,
+      "id": "S17",
+      "start": 1417,
+      "end": 1488,
+      "n": 72,
+      "dur": 3.0,
+      "kind": "insert",
+      "step": 1,
+      "camera": "top-down",
+      "desc": "Mock-test score circled red, below target. Three older sheets beneath, also circled, also below."
+    },
+    {
+      "idx": 17,
+      "id": "S18",
+      "start": 1489,
+      "end": 1584,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "montage",
+      "step": 3,
+      "camera": "locked",
+      "desc": "Her days repeat, light cycling, four 24-frame dissolves. Book tower grows each time. Mirror of S05."
+    },
+    {
+      "idx": 18,
+      "id": "S19",
+      "start": 1585,
+      "end": 1656,
+      "n": 72,
+      "dur": 3.0,
+      "kind": "insert",
+      "step": 1,
+      "camera": "static",
+      "desc": "Tea someone left hours ago, skin formed on top. A plate of food, untouched."
+    },
+    {
+      "idx": 19,
+      "id": "S20",
+      "start": 1657,
+      "end": 1752,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "character",
+      "step": 2,
+      "camera": "medium",
+      "desc": "Door ajar, two silhouettes arguing in the next room - shapes only, never faces. She puts on headphones. Nothing is playing."
+    },
+    {
+      "idx": 20,
+      "id": "S21",
+      "start": 1753,
+      "end": 1848,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "character",
+      "step": 2,
+      "camera": "close",
+      "desc": "She looks at a framed family photo, everyone smiling, and turns it face down."
+    },
+    {
+      "idx": 21,
+      "id": "S22",
+      "start": 1849,
+      "end": 1944,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "insert",
+      "step": 1,
+      "camera": "close",
+      "desc": "An envelope she was not meant to see - FINAL NOTICE. She reads it and puts it back exactly where it was."
+    },
+    {
+      "idx": 22,
+      "id": "S23",
+      "start": 1945,
+      "end": 2040,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "insert",
+      "step": 1,
+      "camera": "top-down",
+      "desc": "She squares the A4 stack, hundreds of sheets, the whole year. Establishes the object that becomes the heart."
+    },
+    {
+      "idx": 23,
+      "id": "S24",
+      "start": 2041,
+      "end": 2136,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "character",
+      "step": 3,
+      "camera": "compress-8pct",
+      "desc": "She tries to work and cannot. Slow 8% lens compression makes the walls close in without moving anything."
+    },
+    {
+      "idx": 24,
+      "id": "S25",
+      "start": 2137,
+      "end": 2232,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "character",
+      "step": 2,
+      "camera": "tracking",
+      "desc": "She stands, grabs the stack to her chest, goes down a dim stairwell past the closed door of the argument."
+    },
+    {
+      "idx": 25,
+      "id": "S26",
+      "start": 2233,
+      "end": 2304,
+      "n": 72,
+      "dur": 3.0,
+      "kind": "character",
+      "step": 2,
+      "camera": "medium",
+      "desc": "Out into the same golden street light. Mirror of S13."
+    },
+    {
+      "idx": 26,
+      "id": "S27",
+      "start": 2305,
+      "end": 2400,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "establish",
+      "step": 2,
+      "camera": "locked-wide",
+      "desc": "Symmetrical wide of the crossing. He enters bottom-left (cool), she bottom-right (warm). Neither looks up."
+    },
+    {
+      "idx": 27,
+      "id": "S28",
+      "start": 2401,
+      "end": 2496,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "character",
+      "step": 2,
+      "camera": "tracking",
+      "desc": "His side: walking fast, talking into the phone, weaving through people."
+    },
+    {
+      "idx": 28,
+      "id": "S29",
+      "start": 2497,
+      "end": 2592,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "character",
+      "step": 2,
+      "camera": "tracking",
+      "desc": "Her side: walking slowly, hugging the papers, head down."
+    },
+    {
+      "idx": 29,
+      "id": "S30",
+      "start": 2593,
+      "end": 2688,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "character",
+      "step": 2,
+      "camera": "medium",
+      "desc": "Crowd flows between them. Two near-misses where a body crosses the sightline exactly when one might have looked up."
+    },
+    {
+      "idx": 30,
+      "id": "S31",
+      "start": 2689,
+      "end": 2784,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "establish",
+      "step": 2,
+      "camera": "wide",
+      "desc": "Signal changes, crowd surges from both sides, they step into the crossing."
+    },
+    {
+      "idx": 31,
+      "id": "S32",
+      "start": 2785,
+      "end": 2880,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "character",
+      "step": 2,
+      "camera": "low-between-feet",
+      "desc": "The gap narrows. Still not looking. Camera low between their feet, crowd legs both sides."
+    },
+    {
+      "idx": 32,
+      "id": "S33",
+      "start": 2881,
+      "end": 2952,
+      "n": 72,
+      "dur": 3.0,
+      "kind": "key",
+      "step": 1,
+      "camera": "close",
+      "desc": "HE LIFTS HIS EYES. 4-frame lift f2917/2919/2921/2923, then hold. Pupils dilate 15%."
+    },
+    {
+      "idx": 33,
+      "id": "S34",
+      "start": 2953,
+      "end": 3012,
+      "n": 60,
+      "dur": 2.5,
+      "kind": "key",
+      "step": 1,
+      "camera": "close-mirror",
+      "desc": "She lifts hers. Mirrored, half a beat faster."
+    },
+    {
+      "idx": 34,
+      "id": "S35",
+      "start": 3013,
+      "end": 3072,
+      "n": 60,
+      "dur": 2.5,
+      "kind": "key",
+      "step": 1,
+      "camera": "two-shot",
+      "desc": "The last three steps. Speed ramps to 40% for them only; the crowd stays at normal speed."
+    },
+    {
+      "idx": 35,
+      "id": "S36",
+      "start": 3073,
+      "end": 3096,
+      "n": 24,
+      "dur": 1.0,
+      "kind": "key",
+      "step": 1,
+      "camera": "two-shot",
+      "desc": "THE CONTACT. All sound cuts. 2-frame white flash. Crowd desaturates 5%/frame. Heartbeats out of sync (his f3081, hers f3085), converge on f3096."
+    },
+    {
+      "idx": 36,
+      "id": "S37",
+      "start": 3097,
+      "end": 3216,
+      "n": 120,
+      "dur": 5.0,
+      "kind": "key",
+      "step": 1,
+      "camera": "arc-180",
+      "desc": "THE WORLD STOPS. Everything but them freezes on f3097 and greys out over 24 frames. Pigeon mid-flap, coin in the air. Slow 180 arc."
+    },
+    {
+      "idx": 37,
+      "id": "S38",
+      "start": 3217,
+      "end": 3312,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "key",
+      "step": 2,
+      "camera": "push-in-hard",
+      "desc": "His POV of her. Heartbeat 3220/3240/3258/3274/3288/3300. Iris flare, creamy DOF."
+    },
+    {
+      "idx": 38,
+      "id": "S39",
+      "start": 3313,
+      "end": 3408,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "key",
+      "step": 2,
+      "camera": "push-in-mirror",
+      "desc": "Her POV of him, mirrored exactly. Heartbeat 3316/3336/3354/3370/3384/3396."
+    },
+    {
+      "idx": 39,
+      "id": "S40",
+      "start": 3409,
+      "end": 3504,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "key",
+      "step": 2,
+      "camera": "intercut-close",
+      "desc": "THE SMILE REACHES THE BRAIN. Bloom at the eye-line travels up frame f3421-3432. Eyes smile first f3433, mouth follows 8 frames later f3445. Him 4 frames quicker."
+    },
+    {
+      "idx": 40,
+      "id": "S41",
+      "start": 3505,
+      "end": 3600,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "key",
+      "step": 1,
+      "camera": "intercut-fast",
+      "desc": "HEARTS RACING. Shared accelerating pulses 3508->3590, intervals 16 down to 5 frames. Frame edges breathe."
+    },
+    {
+      "idx": 41,
+      "id": "S42",
+      "start": 3601,
+      "end": 3696,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "fx",
+      "step": 1,
+      "camera": "medium",
+      "desc": "THEIR PROBLEMS DISSOLVE. Behind him the office tower peels into drifting ash; behind her the book towers and arguing silhouettes crumble to paper flakes."
+    },
+    {
+      "idx": 42,
+      "id": "S43",
+      "start": 3697,
+      "end": 3816,
+      "n": 120,
+      "dur": 5.0,
+      "kind": "key",
+      "step": 2,
+      "camera": "slow-wide",
+      "desc": "ONLY TWO PEOPLE IN THE WORLD. Crowd finishes dissolving to white, street and buildings go. A warm white void, still ten feet apart."
+    },
+    {
+      "idx": 43,
+      "id": "S44",
+      "start": 3817,
+      "end": 3936,
+      "n": 120,
+      "dur": 5.0,
+      "kind": "key",
+      "step": 2,
+      "camera": "two-shot",
+      "desc": "Blush blooms over 8 frames, #FF9E7A at 25%, two highlight dashes each. 12-16 sparse sparkles. Both breathe out."
+    },
+    {
+      "idx": 44,
+      "id": "S45",
+      "start": 3937,
+      "end": 4032,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "character",
+      "step": 2,
+      "camera": "intercut",
+      "desc": "The world snaps quietly back. Phone still at his ear, call timer still running - the stake returns. Cut between timer and her face."
+    },
+    {
+      "idx": 45,
+      "id": "S46",
+      "start": 4033,
+      "end": 4152,
+      "n": 120,
+      "dur": 5.0,
+      "kind": "key",
+      "step": 2,
+      "camera": "close-hand",
+      "desc": "HE ENDS THE CALL. Thumb approaches, hovers 24 frames f4073-4096, pulls back f4097, cut to his face f4109, presses f4133. Timer freezes then dies."
+    },
+    {
+      "idx": 46,
+      "id": "S47",
+      "start": 4153,
+      "end": 4248,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "character",
+      "step": 2,
+      "camera": "close",
+      "desc": "Black screen holds her reflection. His key light shifts cyan to gold over 10 frames. Shoulders drop 4px."
+    },
+    {
+      "idx": 47,
+      "id": "S48",
+      "start": 4249,
+      "end": 4368,
+      "n": 120,
+      "dur": 5.0,
+      "kind": "key",
+      "step": 2,
+      "camera": "close-hands",
+      "desc": "SHE LETS GO. Fingers open one at a time: little/ring/middle, cut to her face f4321 watching him not the papers, index, thumb f4343."
+    },
+    {
+      "idx": 48,
+      "id": "S49",
+      "start": 4369,
+      "end": 4464,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "fx",
+      "step": 1,
+      "camera": "medium",
+      "desc": "The stack tips out of her arms and falls. First gust hits f4448."
+    },
+    {
+      "idx": 49,
+      "id": "S50",
+      "start": 4465,
+      "end": 4560,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "fx",
+      "step": 1,
+      "camera": "tilt-up",
+      "desc": "The wind takes them - sheets lift instead of falling and the first leave her hands. Camera low and tight on her, sun behind, each sheet translucent with a warm rim."
+    },
+    {
+      "idx": 50,
+      "id": "S51",
+      "start": 4561,
+      "end": 4680,
+      "n": 120,
+      "dur": 5.0,
+      "kind": "fx",
+      "step": 1,
+      "camera": "crane-up-low",
+      "desc": "The ribbon climbs HER side of frame in a corkscrew, drawing the right lobe of the heart as it flies. Camera pulls back and cranes, still looking up."
+    },
+    {
+      "idx": 51,
+      "id": "S52",
+      "start": 4681,
+      "end": 4824,
+      "n": 144,
+      "dur": 6.0,
+      "kind": "key",
+      "step": 1,
+      "camera": "orbit-low-high",
+      "desc": "THE HEART, DRAWN. The ribbon runs over the notch, down his side and out toward him. At f4752 the whole curve is occupied at once and the score peaks. Then the path lets go (46-frame fade from f4800)."
+    },
+    {
+      "idx": 52,
+      "id": "S53",
+      "start": 4825,
+      "end": 4920,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "fx",
+      "step": 1,
+      "camera": "medium",
+      "desc": "Past him the heart has no hold on them; the sheets blow away as ordinary wind and tumble out of frame. They step toward each other through the last of it."
+    },
+    {
+      "idx": 53,
+      "id": "S54",
+      "start": 4921,
+      "end": 5016,
+      "n": 96,
+      "dur": 4.0,
+      "kind": "key",
+      "step": 2,
+      "camera": "ground-level-macro",
+      "desc": "THE SECOND RING. Ground level among the settling sheets: her white paper, his creased page, his phone face up. Screen lights SUPERIOR CALLING - cyan, the only cool light left in a wholly gold frame. Buzzes twice. Nobody reaches for it. It dies. Do NOT cut to his face - staying on the abandoned things is what says he is not even thinking about it."
+    },
+    {
+      "idx": 54,
+      "id": "S55",
+      "start": 5017,
+      "end": 5136,
+      "n": 120,
+      "dur": 5.0,
+      "kind": "key",
+      "step": 2,
+      "camera": "close-to-wide",
+      "desc": "Two hands, not touching, a 2cm gap held for a full second. Pull back to a wide two-shot: the two of them, the settled paper, the dark phone. Neither has looked down. Fade to #FFF6EC over the final 24 frames. Deliberately unresolved."
+    }
+  ],
+  "music_cues": [
+    {
+      "frame": 1,
+      "cue": "solo piano, metronomic, faintly dissonant, clock tick under it; a tighter layer added each time the day repeats"
+    },
+    {
+      "frame": 1153,
+      "cue": "same piano motif transposed up a fourth - her theme IS his theme in another key. Cello drone enters"
+    },
+    {
+      "frame": 2305,
+      "cue": "both motifs interleave and resolve into one melody. Strings rise, tempo creeps"
+    },
+    {
+      "frame": 3073,
+      "cue": "ALL SOUND CUTS over 3 frames - one sustained violin plus a heartbeat"
+    },
+    {
+      "frame": 3217,
+      "cue": "heartbeat accelerates 60->130bpm, strings swell underneath"
+    },
+    {
+      "frame": 3937,
+      "cue": "main theme finally opens, full warm strings"
+    },
+    {
+      "frame": 4465,
+      "cue": "peak - strings, choir, soft percussion"
+    },
+    {
+      "frame": 4752,
+      "cue": "PEAK BEAT - sun bursts through the heart"
+    },
+    {
+      "frame": 4921,
+      "cue": "falls back to solo piano, resolved, major"
+    },
+    {
+      "frame": 4945,
+      "cue": "the phone's buzz is the ONLY diegetic sound allowed back in - two short vibrations against paper, under the solo piano, then nothing"
+    }
+  ],
+  "assets": {
+    "characters": "BOOTH.pm (search VRM / VRChat / 3Dキャラクター) - professionally made anime VRM avatars, proper edge flow, hand-painted textures, hair cards, full blendshapes. Most Y1500-5000, many free. Alternatives: Sketchfab (VRM / anime-style tags), VRoid Hub. VRoid Studio only as fallback, and only with repainted textures.",
+    "motion": "Mixamo (free): walk, idle, sitting, typing, look-up. Auto-retarget, then hand-key the acting beats.",
+    "environments": "Poly Haven (CC0), BlenderKit, Quaternius / Kenney (CC0)",
+    "hdri": "Poly Haven 4K+ - studio_small_08 office, low-sun HDRI street",
+    "shading": "Free NPR node kits (Blendkit, itch.io NPR starter packs) or build the node group in section 8. The shader matters more than the model.",
+    "music": "Spitfire Audio LABS (free, film-grade: Soft Piano / Strings / Cello / Voices) via any DAW. Or Suno/Udio with the prompt in section 2. FluidSynth agent is for mocking up timing only - GM strings will not sound like an orchestral score."
+  },
+  "hardware_warnings": [
+    "TEST FIRST: EEVEE crashes on image-textured planes on this Radeon (atio6axx.dll). A VRM is image-textured. Render one frame before building anything; fallback is baking to flat toon colours.",
+    "Bloom/glare/vignette in ffmpeg, not the compositor (~3 s/frame there).",
+    "World volumes render black on this GPU - use a volume box for the god-rays in S51/S52.",
+    "Rigid bodies need frame pre-stepping before an animation render - critical for S49-S53.",
+    "Each shot must render exactly round(dur*fps) frames.",
+    "Estimated full render: 5040 frames at ~1.4 s/frame toon 1080p = ~2 hours, plus paper sim bake. 50% preview ~30 min.",
+    "6 GB RAM is the real ceiling, not the GPU. High-poly BOOTH models plus a full environment will thrash: one shot per Blender process, decimate background props, proxy anything beyond mid-ground.",
+    "Do NOT use Freestyle globally - it is CPU-bound and this box has 2 cores (+15-40 s/frame = +21 to +56 h). Inverted hull is what anime games ship."
+  ],
+  "quality_tier": "high",
+  "hero_shots": [
+    "S03",
+    "S16",
+    "S33",
+    "S34",
+    "S36",
+    "S38",
+    "S39",
+    "S40",
+    "S44",
+    "S46",
+    "S48",
+    "S52"
+  ],
+  "hero_shots_note": "Render these ~1100 frames with Freestyle line art + higher samples (~25 s/frame). Everything else on inverted hull (~5 s/frame). ~13 h total; run overnight.",
+  "score": {
+    "motif": "Four-note descending motif that never resolves until the final eight bars.",
+    "his_theme": {
+      "key": "A minor",
+      "bpm": 68,
+      "notes": "A-G-F-E",
+      "lead": "solo piano"
+    },
+    "her_theme": {
+      "key": "D minor",
+      "bpm": 72,
+      "notes": "D-C-Bb-A",
+      "lead": "solo cello",
+      "why": "up a perfect fourth - same melody one step higher in tension, and a IV-i pull toward his"
+    },
+    "convergence": {
+      "frames": [
+        2305,
+        3072
+      ],
+      "key": "D minor -> F major",
+      "event": "the two motifs interleave in counterpoint"
+    },
+    "silence": {
+      "frame": 3073,
+      "event": "all diegetic sound and music cut over 3 frames; one violin harmonic on A plus a 40 Hz sub drop; heartbeat enters f3081"
+    },
+    "inversion": {
+      "frames": [
+        3217,
+        3936
+      ],
+      "key": "F major",
+      "event": "motif inverts and ascends for the first time"
+    },
+    "peak": {
+      "frame": 4752,
+      "key": "Ab major",
+      "event": "modulation up a minor third, wordless female choir, harp, full strings"
+    },
+    "resolution": {
+      "frames": [
+        4921,
+        5040
+      ],
+      "key": "F major",
+      "bpm": 60,
+      "event": "solo piano plays the motif ascending and it finally resolves - the first resolved cadence in the film"
+    },
+    "heartbeat": "soft kick + 45 Hz sub, no click. Hits on the exact frames in script section 5. Duck strings 2 dB per hit.",
+    "forbidden": [
+      "drums",
+      "percussion beyond the heartbeat",
+      "electronics",
+      "lyrics"
+    ]
+  },
+  "render_settings": {
+    "engine": "EEVEE Next",
+    "samples": 64,
+    "samples_wides": 32,
+    "ao": {
+      "distance": 0.3,
+      "factor": 0.6
+    },
+    "bloom": "OFF - do it in ffmpeg",
+    "motion_blur": "OFF - hand-authored smears only; real blur fights the 2s stepping",
+    "colour_management": "Standard, look None - NOT Filmic (Filmic mushes the flat colour bands and kills the cel look)",
+    "output": "PNG RGBA, film_transparent where compositing",
+    "resolution": [
+      1920,
+      1080
+    ],
+    "outlines": "inverted hull (Solidify 0.003, flipped normals, backface cull, emission), thickness driven by camera distance; Freestyle only on hero shots"
+  },
+  "render_estimates": {
+    "draft_480p": "35 min",
+    "standard_1080p": "2 h",
+    "high_1080p_full_npr": "7 h",
+    "very_high_1440p": "17 h",
+    "recommended_mixed_hero": "~13 h (1100 hero frames at ~25 s + 3940 at ~5 s)"
+  },
+  "act6_choreography": {
+    "principle": "The symbol is the motion. The sheets never park on a static outline - the heart is the shape their flight leaves in the air, drawn from her to him.",
+    "path": "girl -> full heart loop -> man, concatenated then resampled to CONSTANT ARC LENGTH",
+    "why_arc_length": "Sampling the raw heart parameter bunches sheets at the lobes and starves the point, which is exactly where the eye checks the shape.",
+    "direction": "She is screen right, so the ribbon climbs her side first and comes down his. Reversed, the gesture reads backwards.",
+    "traverse_frames": 287,
+    "stagger": "Sheet 0 leaves f4465 and reaches his end at f4752; the last leaves AT f4752 and is still in her hands. Between them the ribbon covers the whole curve, so the heart completes on the exact frame the score peaks on.",
+    "spiral": "each sheet corkscrews 2.4-4.1 turns around the path, radius tapered at both ends",
+    "release": {
+      "frame": 4800,
+      "fade": 46,
+      "after": "ordinary wind, tumbling out past him"
+    },
+    "built_by": "build/paper_heart/build_act6.py"
+  },
+  "act6_production_notes": [
+    "Camera must be LOW (~1.2 m) looking up. At eye height the heart projects below the horizon onto dark ground and stops reading as a shape at all.",
+    "White paper on a bright sky is invisible - the first exposure clipped the sky to white and the heart vanished. Sheets must be the brightest thing in frame: deep twilight, exposure -0.55.",
+    "Heart scaled to ~3.9 m so 60 real A4 sheets sit ~0.22 m apart and touch into a solid outline. At the original scale they were half a metre apart and read as confetti.",
+    "CHANGED FROM PLAN: the sun no longer bursts through the notch in-camera. With the camera low enough for the heart to read against sky, the sun would need to sit 18.6 deg up, which is not a sunset. Low sun is the better image; add the notch flare in the ffmpeg pass.",
+    "Sky is Nishita procedural, not an HDRI - keeps clear of the Radeon image-texture crash.",
+    "Figures in the current render are deliberate silhouette stand-ins. At this sun angle they are pure silhouette anyway, which is why the shot could be built before the character models exist."
+  ],
+  "characters": {
+    "sheet": "scripts/paper_heart/characters.md",
+    "reference_images": "scripts/paper_heart/reference/ (girl.jpg, man.jpg - supplied by user 2026-09-20)",
+    "girl": {
+      "hair": "long wavy near-black #1A1620 with warm sunset rim #F2A98A",
+      "eyes": "muted blue-grey #7FA8C9",
+      "skin": "#F5D9C4 shadow #D9A899",
+      "costume": "cream camisole under an oversized coral shirt-jacket #E8A08A worn off one shoulder",
+      "accessories": "silver star hair clip, dusty-rose ribbon, dark bag strap with teal charm #2AA8A0",
+      "height": 1.62,
+      "note": "reference expression IS the Act 2 expression - do not make her cute-and-happy early"
+    },
+    "man": {
+      "hair": "short spiky white #EDEDF2, cool shadow #C3C4D0, fringe over one eye",
+      "eyes": "saturated cyan #35C5D4 - his most distinctive feature",
+      "skin": "#F2DCC9 shadow #D4A899",
+      "costume": "black ribbed sweater #1C1C22 open at the neck, undone black tie, black leather gloves",
+      "height": 1.8,
+      "note": "reference has him ON THE PHONE - that is all of Act 1 and what he gives up in S46"
+    },
+    "why_the_pairing_works": "Their palettes are near-opposites and that is doing real work: near-black vs near-white hair reads apart in silhouette with no faces (S43, Act 6); muted blue-grey vs saturated cyan eyes carries the matched push-ins S38/S39; and her warm coral against his cold black IS the two-world colour script. Do not warm him or cool her before the crossing.",
+    "search_terms": {
+      "girl": [
+        "VRM 黒髪 ロング",
+        "anime girl VRM long black hair",
+        "VRoid 女性 ロングヘア"
+      ],
+      "man": [
+        "VRM 白髪 男性",
+        "Gojo VRM",
+        "anime male VRM white hair",
+        "VRChat 男性アバター 白髪"
+      ]
+    },
+    "licence_note": "The male reference is recognisably Gojo Satoru (Jujutsu Kaisen) fan art. Not an issue for unpublished practice work; matters only if that changes."
+  },
+  "theme": {
+    "equal_sacrifice": "What they release carries equal weight and the structure enforces it: Acts 1 and 2 are the same length and shot count, S46 and S48 are both 120 frames, and BOTH let go of paper - his one creased page from S09 joins her hundreds and takes the notch at the apex of the heart.",
+    "consequence": "The sacrifice has to lead somewhere or it costs nothing. S54: the phone rings a second time on the ground and he does not look. The opportunity is still live, so the price is real and ongoing. The first hang-up was reflex; ignoring the second ring is a decision.",
+    "deliberately_unresolved": "Never says whether he loses the job. Ruined = morality tale about career vs happiness; working out = fantasy. Open keeps it a love story."
+  }
+}

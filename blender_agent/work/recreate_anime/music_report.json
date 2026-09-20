@@ -1,0 +1,10 @@
+{
+ "score": 0.233,
+ "bands_l1": 0.128,
+ "centroid_rel": 0.056,
+ "lufs_db": 0.0,
+ "lra_db": 0.3,
+ "energy_corr": 0.989,
+ "bpm_rel": 0.014,
+ "key_match": true
+}

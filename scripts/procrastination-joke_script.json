@@ -1,0 +1,35 @@
+{
+  "title": "Google's Productivity Trap",
+  "segments": [
+    {
+      "kind": "hook",
+      "topic": "",
+      "text": "Stickman aimed for productivity \u2013 Google had other ideas."
+    },
+    {
+      "kind": "segment",
+      "topic": "Setup",
+      "text": "He sits, opens his laptop, and types 'how to be productive'."
+    },
+    {
+      "kind": "segment",
+      "topic": "Result",
+      "text": "The first link says 'How to procrastinate'."
+    },
+    {
+      "kind": "segment",
+      "topic": "Scroll",
+      "text": "He clicks and starts scrolling, his thought bubble pops up: 'Where did my to-do list go?' He forgets what he was supposed to do."
+    },
+    {
+      "kind": "segment",
+      "topic": "Punchline",
+      "text": "Now he\u2019s scrolling instead of doing\u2014Google\u2019s original productivity hack."
+    },
+    {
+      "kind": "outro",
+      "topic": "",
+      "text": "Hit like if you've ever been stuck like Stickman."
+    }
+  ]
+}

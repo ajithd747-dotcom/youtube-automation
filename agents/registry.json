@@ -1,0 +1,105 @@
+[
+  {
+    "name": "benchmark",
+    "title": "Recreation & benchmark agent",
+    "kind": "algorithmic",
+    "role": "Recreates a reference video from its analysis (shot spec, Blender presets, music/voice agents, GUI screen recording) and scores it against the original (SSIM, colour, cuts, motion, WER, pitch, loudness), then guides fixes round by round",
+    "path": "blender_agent/benchmark",
+    "entry": null,
+    "skills_dir": "blender_agent/skills",
+    "llm": false
+  },
+  {
+    "name": "blender-coder",
+    "title": "Blender coder agent",
+    "kind": "llm",
+    "role": "Writes extra bpy code for effects the shot DSL cannot express, using docs+skills RAG, static safety check and a headless self-repair loop",
+    "path": "blender_agent",
+    "entry": null,
+    "skills_dir": "blender_agent/skills",
+    "llm": true
+  },
+  {
+    "name": "blender-director",
+    "title": "Blender director agent",
+    "kind": "llm",
+    "role": "Reads each script segment and plans the shot (2D DSL or cinematic recipe + mood + title), grounded by the skill library",
+    "path": "blender_agent",
+    "entry": null,
+    "skills_dir": "blender_agent/skills",
+    "llm": true
+  },
+  {
+    "name": "blender-render",
+    "title": "Blender render agent",
+    "kind": "algorithmic",
+    "role": "Builds and renders shots headless (physics pre-step, quality ladder, draft fallback, per-shot cache) and muxes audio/captions",
+    "path": "blender_agent",
+    "entry": null,
+    "skills_dir": "blender_agent/skills",
+    "llm": false
+  },
+  {
+    "name": "music",
+    "title": "Music agent",
+    "kind": "hybrid",
+    "role": "Plans and produces background music: mood/tempo/key from the script and shot plan, real instruments via FluidSynth (or a numpy synth), risers/impacts on the cuts, reference matching, ducking under narration, loudness mastering",
+    "path": "agents/music",
+    "entry": "agent.py:MusicAgent",
+    "skills_dir": "agents/music/skills",
+    "llm": true,
+    "created_by": "manual"
+  },
+  {
+    "name": "research",
+    "title": "Research agent",
+    "kind": "external",
+    "role": "Gathers topic data with a browser (Playwright MCP) and web search, saves notes to research/<topic>.md",
+    "path": "research",
+    "skills_dir": null,
+    "llm": true,
+    "note": "run by Claude Code, no python entry"
+  },
+  {
+    "name": "script-writer",
+    "title": "Script writer agent",
+    "kind": "llm",
+    "role": "Turns research notes into a category-specific video script (draft -> critique -> revise) via the multi-provider LLM router",
+    "path": "scripts",
+    "entry": null,
+    "skills_dir": null,
+    "llm": true
+  },
+  {
+    "name": "skill-learner",
+    "title": "Skill learning agent",
+    "kind": "hybrid",
+    "role": "Extracts evidence from videos/books (transcribe, cuts, frames, metrics), distils candidate skills, verifies them headless and promotes them; retrospective after every run",
+    "path": "blender_agent",
+    "entry": null,
+    "skills_dir": "blender_agent/skills",
+    "llm": true
+  },
+  {
+    "name": "visual-qa",
+    "title": "Visual Qa",
+    "kind": "algorithmic",
+    "role": "Checks every planned shot before the long render (still render -> exposure/haze/clipping metrics + subject-in-frame test) and auto-applies fixes (exposure bias, fog scale) to the shot plan",
+    "path": "agents/visual-qa",
+    "entry": "agent.py:VisualQaAgent",
+    "skills_dir": "agents/visual-qa/skills",
+    "llm": false,
+    "created_by": "factory"
+  },
+  {
+    "name": "voice",
+    "title": "Voice agent",
+    "kind": "hybrid",
+    "role": "Chooses the narrator (engine, voice, speed, pitch) from the content and skills, produces word-timed narration (local Kokoro or edge-tts), matches a reference narrator's pitch and pace, builds word-highlight captions",
+    "path": "agents/voice",
+    "entry": "agent.py:VoiceAgent",
+    "skills_dir": "agents/voice/skills",
+    "llm": true,
+    "created_by": "manual"
+  }
+]

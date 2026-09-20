@@ -1,0 +1,155 @@
+{
+ "video": {
+  "duration_ratio": 0.996,
+  "cut_alignment_f1": 0.273,
+  "motion_corr": 0.082,
+  "ssim_mean": 0.522,
+  "hist_intersection": 0.438,
+  "mean_colour_similarity": 0.805,
+  "brightness_corr": 0.648,
+  "per_time": [
+   {
+    "t": 0.25,
+    "ssim": 0.954,
+    "hist": 1.0
+   },
+   {
+    "t": 0.75,
+    "ssim": 0.95,
+    "hist": 1.0
+   },
+   {
+    "t": 1.25,
+    "ssim": 0.466,
+    "hist": 0.059
+   },
+   {
+    "t": 1.75,
+    "ssim": 0.368,
+    "hist": 0.019
+   },
+   {
+    "t": 2.25,
+    "ssim": 0.259,
+    "hist": 0.179
+   },
+   {
+    "t": 2.75,
+    "ssim": 0.59,
+    "hist": 0.0
+   },
+   {
+    "t": 3.25,
+    "ssim": 0.493,
+    "hist": 0.493
+   },
+   {
+    "t": 3.75,
+    "ssim": 0.736,
+    "hist": 0.767
+   },
+   {
+    "t": 4.25,
+    "ssim": 0.714,
+    "hist": 0.464
+   },
+   {
+    "t": 4.75,
+    "ssim": 0.582,
+    "hist": 0.582
+   },
+   {
+    "t": 5.25,
+    "ssim": 0.768,
+    "hist": 0.638
+   },
+   {
+    "t": 5.75,
+    "ssim": 0.334,
+    "hist": 0.81
+   },
+   {
+    "t": 6.25,
+    "ssim": 0.2,
+    "hist": 0.21
+   },
+   {
+    "t": 6.75,
+    "ssim": 0.459,
+    "hist": 0.136
+   },
+   {
+    "t": 7.25,
+    "ssim": 0.565,
+    "hist": 0.126
+   },
+   {
+    "t": 7.75,
+    "ssim": 0.64,
+    "hist": 0.526
+   },
+   {
+    "t": 8.25,
+    "ssim": 0.612,
+    "hist": 0.657
+   },
+   {
+    "t": 8.75,
+    "ssim": 0.533,
+    "hist": 0.414
+   },
+   {
+    "t": 9.25,
+    "ssim": 0.03,
+    "hist": 0.003
+   },
+   {
+    "t": 9.75,
+    "ssim": 0.011,
+    "hist": 0.0
+   },
+   {
+    "t": 10.25,
+    "ssim": 0.011,
+    "hist": 0.0
+   },
+   {
+    "t": 10.75,
+    "ssim": 0.867,
+    "hist": 1.0
+   },
+   {
+    "t": 11.25,
+    "ssim": 0.867,
+    "hist": 1.0
+   }
+  ],
+  "video_score": 0.514
+ },
+ "audio": {
+  "score": 0.251,
+  "bands_l1": 0.121,
+  "centroid_rel": 0.071,
+  "lufs_db": 0.0,
+  "lra_db": 0.4,
+  "energy_corr": 0.99,
+  "bpm_rel": 0.014,
+  "key_match": true,
+  "audio_score": 0.875,
+  "ref": {
+   "lufs": -14.4,
+   "lra": 2.2,
+   "bpm": 178.5,
+   "key": "F major",
+   "centroid_hz": 1364.0
+  },
+  "rec": {
+   "lufs": -14.4,
+   "lra": 1.8,
+   "bpm": 90.5,
+   "key": "F major",
+   "centroid_hz": 1461.0
+  }
+ },
+ "overall": 0.695
+}

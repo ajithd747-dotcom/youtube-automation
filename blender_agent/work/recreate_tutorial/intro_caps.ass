@@ -1,0 +1,52 @@
+[Script Info]
+ScriptType: v4.00+
+WrapStyle: 0
+PlayResX: 1280
+PlayResY: 720
+
+[V4+ Styles]
+Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
+Style: Cap,Arial,57,&H0000E0FF,&H0000E0FF,&H00000000,&H80000000,1,0,0,0,100,100,0,0,1,7,1,2,76,76,57,1
+
+[Events]
+Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
+Dialogue: 0,0:00:00.30,0:00:00.69,Cap,,0,0,0,,What if a
+Dialogue: 0,0:00:00.61,0:00:01.35,Cap,,0,0,0,,few clever
+Dialogue: 0,0:00:01.27,0:00:01.88,Cap,,0,0,0,,tweaks could
+Dialogue: 0,0:00:01.80,0:00:02.56,Cap,,0,0,0,,transform your
+Dialogue: 0,0:00:02.48,0:00:03.54,Cap,,0,0,0,,animation into a
+Dialogue: 0,0:00:03.46,0:00:04.13,Cap,,0,0,0,,cinematic
+Dialogue: 0,0:00:04.05,0:00:05.23,Cap,,0,0,0,,masterpiece
+Dialogue: 0,0:00:06.14,0:00:07.25,Cap,,0,0,0,,Curious how
+Dialogue: 0,0:00:08.14,0:00:08.92,Cap,,0,0,0,,Stick around
+Dialogue: 0,0:00:08.88,0:00:09.57,Cap,,0,0,0,,we're diving in
+Dialogue: 0,0:00:09.49,0:00:10.10,Cap,,0,0,0,,effects and
+Dialogue: 0,0:00:10.02,0:00:10.82,Cap,,0,0,0,,compositing
+Dialogue: 0,0:00:10.74,0:00:11.72,Cap,,0,0,0,,making it simple
+Dialogue: 0,0:00:11.64,0:00:12.72,Cap,,0,0,0,,and stunning
+Dialogue: 0,0:00:13.64,0:00:14.39,Cap,,0,0,0,,Welcome back to
+Dialogue: 0,0:00:14.31,0:00:15.30,Cap,,0,0,0,,our Blender 2D
+Dialogue: 0,0:00:15.22,0:00:16.23,Cap,,0,0,0,,animation series
+Dialogue: 0,0:00:16.15,0:00:17.24,Cap,,0,0,0,,for beginners
+Dialogue: 0,0:00:17.66,0:00:18.29,Cap,,0,0,0,,Today we're
+Dialogue: 0,0:00:18.21,0:00:18.86,Cap,,0,0,0,,wrapping up your
+Dialogue: 0,0:00:18.79,0:00:19.66,Cap,,0,0,0,,masterpiece by
+Dialogue: 0,0:00:19.59,0:00:20.16,Cap,,0,0,0,,rendering the
+Dialogue: 0,0:00:20.09,0:00:21.36,Cap,,0,0,0,,animation adding
+Dialogue: 0,0:00:21.29,0:00:22.44,Cap,,0,0,0,,effects and
+Dialogue: 0,0:00:23.04,0:00:24.01,Cap,,0,0,0,,compositing
+Dialogue: 0,0:00:24.07,0:00:24.56,Cap,,0,0,0,,We'll cover
+Dialogue: 0,0:00:24.48,0:00:25.25,Cap,,0,0,0,,Grease Pencil
+Dialogue: 0,0:00:25.17,0:00:25.70,Cap,,0,0,0,,effects for
+Dialogue: 0,0:00:25.62,0:00:26.54,Cap,,0,0,0,,quick polish
+Dialogue: 0,0:00:26.59,0:00:27.21,Cap,,0,0,0,,dive into the
+Dialogue: 0,0:00:27.13,0:00:27.98,Cap,,0,0,0,,compositor for
+Dialogue: 0,0:00:27.90,0:00:28.84,Cap,,0,0,0,,advanced
+Dialogue: 0,0:00:29.30,0:00:29.89,Cap,,0,0,0,,tweaks like
+Dialogue: 0,0:00:29.81,0:00:30.68,Cap,,0,0,0,,bloom green
+Dialogue: 0,0:00:30.65,0:00:31.83,Cap,,0,0,0,,color correction
+Dialogue: 0,0:00:31.85,0:00:32.53,Cap,,0,0,0,,then set up
+Dialogue: 0,0:00:32.45,0:00:33.02,Cap,,0,0,0,,and render your
+Dialogue: 0,0:00:32.94,0:00:34.25,Cap,,0,0,0,,final output
+Dialogue: 0,0:00:36.18,0:00:36.84,Cap,,0,0,0,,Let's make your
+Dialogue: 0,0:00:36.76,0:00:37.81,Cap,,0,0,0,,work shine

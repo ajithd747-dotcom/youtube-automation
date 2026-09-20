@@ -1,0 +1,7 @@
+{
+  "title": "Shorts format test",
+  "segments": [
+    {"kind": "hook", "topic": "", "text": "Testing the new vertical Shorts format for the stickman pipeline."},
+    {"kind": "outro", "topic": "", "text": "If this looks good, subscribe for more short-form content like this."}
+  ]
+}

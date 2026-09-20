@@ -1,0 +1,20 @@
+{
+  "blender_agent/work/recreate_tutorial/compare/side_by_side.mp4": {
+    "status": "rejected",
+    "title": "Side By Side",
+    "description": "",
+    "notes": ""
+  },
+  "recreate/out/film.mp4": {
+    "status": "pending",
+    "title": "Anime impact-frame clip - Blender rebuild (benchmark)",
+    "description": "17 shots, 643 frames (21.43s). Weighted ssim 0.9277, mae 5.80 against the reference. 16/17 shots pass verify; S10 (two-tone impact flash) is at 0.732 vs the 0.75 gate. Benchmark of the rebuild pipeline - not for upload, the script and art are someone else's.",
+    "notes": ""
+  },
+  "recreate/out/film_sbs.mp4": {
+    "status": "approved",
+    "title": "Film Sbs",
+    "description": "",
+    "notes": ""
+  }
+}

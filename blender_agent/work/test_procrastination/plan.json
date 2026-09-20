@@ -1,0 +1,161 @@
+{
+  "title": "Google's Productivity Trap",
+  "style": "stickman",
+  "segments": [
+    [
+      "hook",
+      "",
+      "Stickman aimed for productivity \u2013 Google had other ideas."
+    ],
+    [
+      "segment",
+      "Setup",
+      "He sits, opens his laptop, and types 'how to be productive'."
+    ],
+    [
+      "segment",
+      "Result",
+      "The first link says 'How to procrastinate'."
+    ]
+  ],
+  "shots": [
+    {
+      "style": "stickman",
+      "bg": "#f4f1ea",
+      "camera": "static",
+      "objects": [
+        {
+          "type": "stickman",
+          "pos": [
+            0.0,
+            0.0
+          ],
+          "color": "#111111",
+          "enter": "none",
+          "delay": 0,
+          "loop": "none",
+          "size": 0.3,
+          "action": "talk"
+        },
+        {
+          "type": "text",
+          "pos": [
+            -0.3,
+            0.4
+          ],
+          "color": "#111111",
+          "enter": "slide_in_top",
+          "delay": 0.2,
+          "loop": "none",
+          "size": 0.1,
+          "text": "Productivity"
+        },
+        {
+          "type": "text",
+          "pos": [
+            0.3,
+            0.4
+          ],
+          "color": "#111111",
+          "enter": "slide_in_top",
+          "delay": 0.4,
+          "loop": "none",
+          "size": 0.1,
+          "text": "Other ideas"
+        }
+      ]
+    },
+    {
+      "style": "stickman",
+      "bg": "#f4f1ea",
+      "camera": "static",
+      "objects": [
+        {
+          "type": "stickman",
+          "pos": [
+            0.0,
+            0.0
+          ],
+          "color": "#111111",
+          "enter": "none",
+          "delay": 0,
+          "loop": "none",
+          "size": 0.4,
+          "action": "idle"
+        },
+        {
+          "type": "icon",
+          "pos": [
+            0.3,
+            0.0
+          ],
+          "color": "#457b9d",
+          "enter": "slide_in_right",
+          "delay": 0.4,
+          "loop": "none",
+          "size": 0.15,
+          "icon": "laptop"
+        },
+        {
+          "type": "text",
+          "pos": [
+            0.0,
+            -0.4
+          ],
+          "color": "#111111",
+          "enter": "slide_in_bottom",
+          "delay": 0.8,
+          "loop": "none",
+          "size": 0.1,
+          "text": "how to be productive"
+        }
+      ]
+    },
+    {
+      "style": "stickman",
+      "bg": "#f4f1ea",
+      "camera": "static",
+      "objects": [
+        {
+          "type": "stickman",
+          "pos": [
+            -0.4,
+            0.0
+          ],
+          "color": "#111111",
+          "enter": "none",
+          "delay": 0,
+          "loop": "none",
+          "size": 0.4,
+          "action": "point"
+        },
+        {
+          "type": "icon",
+          "pos": [
+            -0.2,
+            -0.4
+          ],
+          "color": "#e63946",
+          "enter": "none",
+          "delay": 0.4,
+          "loop": "none",
+          "size": 0.15,
+          "icon": "laptop"
+        },
+        {
+          "type": "text",
+          "pos": [
+            0.3,
+            0.2
+          ],
+          "color": "#111111",
+          "enter": "none",
+          "delay": 0.8,
+          "loop": "none",
+          "size": 0.12,
+          "text": "How to procrastinate"
+        }
+      ]
+    }
+  ]
+}

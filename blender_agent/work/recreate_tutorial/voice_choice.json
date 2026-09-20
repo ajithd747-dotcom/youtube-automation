@@ -1,0 +1,28 @@
+{
+ "engine": "kokoro",
+ "voice": "am_adam",
+ "speed": 1.035,
+ "pitch_semitones": 0.26,
+ "reference": {
+  "duration": 587.7,
+  "active_ratio": 0.76,
+  "f0_median": 119.4,
+  "f0_p10": 92.5,
+  "f0_p90": 210.5,
+  "words": 1315,
+  "wpm_speaking": 176.0,
+  "wpm_overall": 134.0,
+  "lufs": -18.0
+ },
+ "voice_stats": {
+  "duration": 6.17,
+  "active_ratio": 0.67,
+  "f0_median": 117.6,
+  "f0_p10": 88.7,
+  "f0_p90": 139.4,
+  "words": 16,
+  "wpm_speaking": 170.0,
+  "wpm_overall": 155.0,
+  "lufs": -21.3
+ }
+}
