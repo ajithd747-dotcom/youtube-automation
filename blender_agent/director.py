@@ -344,10 +344,12 @@ def skill_guidance(query: str, style: str, k=3):
     if SK is None:
         return "", []
     try:
-        hits = SK.match(query, k=k, style=style)
+        standing = SK.standing_rules()
+        hits = [(sc, s) for sc, s in SK.match(query, k=k, style=style) if s.id not in {r.id for r in standing}]
     except Exception:
         return "", []
-    return "\n\n".join(s.brief(700) for _, s in hits), [s.id for _, s in hits]
+    picked = standing + [s for _, s in hits]
+    return "\n\n".join(s.brief(700) for s in picked), [s.id for s in picked]
 
 
 def plan_shot(kind: str, topic: str, text: str, duration: float, style: str, portrait: bool = False,

@@ -155,6 +155,12 @@ def _stem(w: str) -> str:
     return w
 
 
+def standing_rules():
+    """Skills marked `always: true` in their front matter: rules that apply to every request, so they are added to the
+    agent's context without waiting for a trigger match (the per-frame script standard is one)."""
+    return [s for s in load_all() if s.meta.get("always") and s.status in ("verified", "reference")]
+
+
 def match(query: str, k=4, style=None, kinds=None, categories=None, include_candidates=False, min_score=0.5):
     """Rank skills for a script segment / shot description. Returns [(score, Skill)]."""
     skills = [s for s in load_all(include_candidates)

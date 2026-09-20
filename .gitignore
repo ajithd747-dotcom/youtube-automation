@@ -65,6 +65,9 @@ agents/tools_bin/
 blender_agent/tools_bin/
 # project-local toolchain (Blender, ffmpeg, conda env, Ollama + models): rebuilt per tools/README.md
 tools/*
+# training data derived from other people's videos: local only (see CLAUDE.md rule 3)
+training/reference/
+training/runs/
 !tools/README.md
 !tools/environment.lock.txt
 !tools/blender-wrapper.sh
