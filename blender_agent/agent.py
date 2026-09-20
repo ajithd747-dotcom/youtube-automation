@@ -25,6 +25,7 @@ ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(ROOT))
 
+from system_clipboard import read_text_from_clipboard  # noqa: E402
 import blender_runner  # noqa: E402
 import coder  # noqa: E402
 import director  # noqa: E402
@@ -67,8 +68,10 @@ def load_script(args):
         if args.text:
             text = args.text
         elif args.clipboard:
-            text = subprocess.run(["powershell", "-NoProfile", "-Command", "Get-Clipboard -Raw"], capture_output=True,
-                                  text=True, encoding="utf-8").stdout
+            text = read_text_from_clipboard()
+            if text is None:
+                sys.exit("No clipboard here (headless server, or wl-clipboard/xclip missing). "
+                         "Use `--paste < script.txt` or `--text \"...\"` instead.")
         else:
             print("Paste your script, then type END on its own line (or press Ctrl+Z, Enter):")
             lines = []

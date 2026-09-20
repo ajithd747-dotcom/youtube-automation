@@ -13,7 +13,10 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-BLENDER = r"C:\Program Files\Blender Foundation\Blender 4.5\blender.exe"
+sys.path.insert(0, str(ROOT / "blender_agent"))
+from blender_runner import find_blender  # noqa: E402
+
+BLENDER = find_blender()
 
 
 def sh(cmd):

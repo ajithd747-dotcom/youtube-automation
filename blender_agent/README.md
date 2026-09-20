@@ -2,7 +2,7 @@
 
 Paste a script -> get an animated MP4. Blender runs headless, no GUI needed.
 
-```powershell
+```bash
 python blender_agent/agent.py scripts/procrastination-joke_script.json      # existing pipeline script (.json/.md)
 python blender_agent/agent.py --paste                                       # paste text in the terminal, finish with a line: END
 python blender_agent/agent.py --clipboard                                   # use the script text on your clipboard
@@ -51,7 +51,7 @@ loudness, side-by-side video, contact sheet. `recreate/anime_clip.py` (12 s anim
 or crawled (`kb.py build --crawl <url>`). `kb.py search "<query>"`.
 
 ## Setup notes
-- Blender 4.5 LTS (winget); `BLENDER_PATH` overrides detection. ffmpeg/ffprobe on PATH. `.env` LLM keys for the director/coder (falls back to heuristics).
+- Blender 4.5 LTS (`blender` on PATH); `BLENDER_PATH` overrides detection. ffmpeg/ffprobe on PATH. `.env` LLM keys for the director/coder (falls back to heuristics).
 - Audio tools downloaded into `agents/tools_bin/`: FluidSynth 2.6.1 + GeneralUser GS soundfont. pip: faster-whisper, kokoro, soundfile, mido, piper-tts.
 - GUI recording takes over the screen (fullscreen) for ~9 minutes; do not touch the machine meanwhile.
 - Hardware reality (2 cores, integrated GPU, 6 GB): cinematic ~3-6 s/frame at 720p; a 1-minute video = 1-2 hours; use `--quality draft --preview` while iterating.

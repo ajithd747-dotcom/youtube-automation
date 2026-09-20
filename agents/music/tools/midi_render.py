@@ -26,8 +26,9 @@ PROGRAMS = {
 
 
 def find_fluidsynth():
-    for p in BIN.rglob("fluidsynth.exe"):
-        return p
+    for p in BIN.rglob("fluidsynth"):
+        if p.is_file():
+            return p
     return None
 
 

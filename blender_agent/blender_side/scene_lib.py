@@ -138,8 +138,12 @@ _FONT = None
 def _font():
     global _FONT
     if _FONT is None:
-        for p in (r"C:\Windows\Fonts\arialbd.ttf", r"C:\Windows\Fonts\arial.ttf"):
-            if os.path.exists(p):
+        project_fonts = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "fonts")
+        for p in (os.environ.get("BLENDER_AGENT_FONT", ""),
+                  os.path.join(project_fonts, "DejaVuSans-Bold.ttf"),
+                  "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+                  "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"):
+            if p and os.path.exists(p):
                 try:
                     _FONT = bpy.data.fonts.load(p)
                     break

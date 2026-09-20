@@ -14,7 +14,7 @@ triggers:
 - until loop
 - pgrep
 - process check
-- taskkill
+- pkill
 - stop task
 - orphaned process
 - job never finishes
@@ -29,19 +29,18 @@ version: 1
 ---
 ## Rules
 
-**1. A process check that names the processes will match itself.**
+**1. A process check that names the processes will match itself.** (`pkill -f`/`pgrep -f` inside a command that contains the same words will even kill its own shell.)
 
 ```bash
-# WRONG - the powershell/pgrep process's own command line contains these words,
-# so the condition is always true and the loop never exits.
-until ! powershell -c "Get-CimInstance Win32_Process |
-      Where-Object { \$_.CommandLine -match 'render|export|blender' }" | grep -q .; do sleep 20; done
+# WRONG - `pgrep -f` matches against full command lines, and this shell's own command line
+# contains the words, so the condition is always true and the loop never exits.
+until ! pgrep -f 'render|export|blender' > /dev/null; do sleep 20; done
 ```
 Match on the **process name** instead of a command-line substring, or exclude the
 checker's own PID:
 
 ```bash
-until ! powershell -c "Get-Process blender,python -ErrorAction SilentlyContinue" | grep -q .; do sleep 20; done
+until ! pgrep -x blender > /dev/null && ! pgrep -x python3 > /dev/null; do sleep 20; done   # no -f: matches the process name only
 ```
 Symptom: the waiting job sits forever while nothing is actually running, and its output
 file stays empty. Check for real work with a process listing before assuming it is busy.
@@ -52,8 +51,7 @@ running for ~20 minutes after being "stopped" and raced a foreground run over th
 output files, leaving one shot built from stale inputs. Kill the tree and verify:
 
 ```bash
-taskkill /PID <root> /T /F        # Windows
-pkill -TERM -P <root>; kill <root>  # POSIX
+pkill -TERM -P <root>; kill <root>
 ```
 Then list processes again, and treat every artefact written during the overlap as
 suspect. The stale shot was only caught by checking a content invariant (`ink == []`

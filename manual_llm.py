@@ -4,6 +4,8 @@ No API calls, no automation of any subscription -- just a human relay step.
 """
 import sys
 
+from system_clipboard import copy_text_to_clipboard
+
 try:
     sys.stdin.reconfigure(encoding="utf-8")
     sys.stdout.reconfigure(encoding="utf-8")
@@ -19,13 +21,8 @@ def ask(prompt: str, copy_to_clipboard: bool = True) -> str:
     print(prompt)
     print("=" * 70)
 
-    if copy_to_clipboard:
-        try:
-            import subprocess
-            subprocess.run("clip", input=prompt.encode("utf-16"), shell=True, check=True)
-            print("(prompt copied to clipboard)")
-        except Exception:
-            pass
+    if copy_to_clipboard and copy_text_to_clipboard(prompt):
+        print("(prompt copied to clipboard)")
 
     lines = []
     print("\nPaste response, then type END on its own line:")

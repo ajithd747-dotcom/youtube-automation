@@ -62,6 +62,7 @@ Thumbs.db
 # ---------------------------------------------------------------- third-party binaries
 # Redistributable but not ours to vendor, and all re-downloadable. See agents/ docs.
 agents/tools_bin/
+blender_agent/tools_bin/
 *.sf2
 *.dll
 *.exe

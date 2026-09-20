@@ -6,7 +6,7 @@
 #
 #   bash build/paper_heart/finish_act6.sh [in_dir] [out.mp4]
 set -eu
-cd "D:/youtube automation"
+cd "$(dirname "${BASH_SOURCE[0]}")/../.."   # repo root, wherever it is checked out
 IN="${1:-renders/paper_heart/act6}"
 OUT="${2:-renders/paper_heart/act6_finished.mp4}"
 FPS=24

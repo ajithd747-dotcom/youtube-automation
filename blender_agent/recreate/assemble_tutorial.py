@@ -37,9 +37,16 @@ def intro(words):
     vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},zoompan=z='1+0.0006*on':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={W}x{H}:fps={FPS},"
           f"subtitles={ass.name}")
     run("-stream_loop", "5", "-i", ANIME, "-t", "38", "-an", "-vf", vf, "-r", FPS, "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", WORK / "intro_a.mp4", cwd=WORK)
-    card = (f"color=c=0x0d1117:s={W}x{H}:d=3:r={FPS},drawtext=fontfile='C\\:/Windows/Fonts/arialbd.ttf':text='Get the source files':fontcolor=0xFFE000:"
-            f"fontsize=84:bordercolor=black:borderw=6:x=(w-text_w)/2:y=(h-text_h)/2")
-    run("-f", "lavfi", "-i", card, "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", WORK / "intro_b.mp4")
+    # drawtext is not compiled into this ffmpeg; libass (subtitles) is, so the card text is an ASS line
+    card_ass = WORK / "intro_card.ass"
+    card_ass.write_text(
+        f"[Script Info]\nScriptType: v4.00+\nPlayResX: {W}\nPlayResY: {H}\n\n[V4+ Styles]\n"
+        "Format: Name,Fontname,Fontsize,PrimaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\n"
+        "Style: Card,Arial,84,&H0000E0FF,&H00000000,&H00000000,1,0,0,0,100,100,0,0,1,6,0,5,20,20,20,1\n\n"
+        "[Events]\nFormat: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text\n"
+        "Dialogue: 0,0:00:00.00,0:00:03.00,Card,,0,0,0,,Get the source files\n", encoding="utf-8")
+    card = f"color=c=0x0d1117:s={W}x{H}:d=3:r={FPS},subtitles={card_ass.name}"
+    run("-f", "lavfi", "-i", card, "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p", WORK / "intro_b.mp4", cwd=WORK)
     (WORK / "c_intro.txt").write_text("file 'intro_a.mp4'\nfile 'intro_b.mp4'\n", encoding="utf-8")
     run("-f", "concat", "-safe", "0", "-i", "c_intro.txt", "-c", "copy", out, cwd=WORK)
     return out

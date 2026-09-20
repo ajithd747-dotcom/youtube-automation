@@ -12,6 +12,9 @@ import sys
 import time
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "blender_agent"))
+from blender_runner import find_blender  # noqa: E402
+
 _print = print
 
 
@@ -21,7 +24,7 @@ def print(*a, **k):  # progress must reach a piped log as it happens, not at exi
 
 ROOT = Path(__file__).resolve().parent.parent
 REC = ROOT / "recreate"
-BLENDER = r"C:\Program Files\Blender Foundation\Blender 4.5\blender.exe"
+BLENDER = find_blender()
 STAGES = ["bg", "cels", "render", "post", "score"]
 
 

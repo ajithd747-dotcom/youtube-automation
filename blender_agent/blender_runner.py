@@ -1,5 +1,4 @@
 """Locate Blender and run headless jobs (render_shot.py) as subprocesses."""
-import glob
 import json
 import os
 import shutil
@@ -17,16 +16,12 @@ def find_blender() -> str:
     found = shutil.which("blender")
     if found:
         return found
-    pats = [r"C:\Program Files\Blender Foundation\Blender *\blender.exe",
-            r"C:\Program Files (x86)\Blender Foundation\Blender *\blender.exe",
-            os.path.expandvars(r"%LOCALAPPDATA%\Programs\Blender Foundation\Blender *\blender.exe"),
-            "/Applications/Blender.app/Contents/MacOS/Blender", "/usr/bin/blender", "/snap/bin/blender"]
-    for pat in pats:
-        hits = sorted(glob.glob(pat))
-        if hits:
-            return hits[-1]
-    raise FileNotFoundError("Blender not found. Install it (winget install BlenderFoundation.Blender.LTS.4.5) "
-                            "or set BLENDER_PATH to blender.exe")
+    for candidate in (Path.home() / ".local" / "bin" / "blender", Path("/usr/local/bin/blender"), Path("/usr/bin/blender"),
+                      Path("/snap/bin/blender")):
+        if candidate.exists():
+            return str(candidate)
+    raise FileNotFoundError("Blender not found. Put the Blender 4.5 LTS `blender` launcher on PATH "
+                            "(e.g. ~/.local/bin/blender) or set BLENDER_PATH to it")
 
 
 def run_job(job: dict, timeout=7200) -> dict:
