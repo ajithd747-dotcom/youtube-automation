@@ -68,6 +68,12 @@ tools/*
 # training data derived from other people's videos: local only (see CLAUDE.md rule 3)
 training/reference/
 training/runs/
+# evidence packs (contact sheets = frames, plus transcripts) of the anime reference videos: local only (CLAUDE.md rule 3)
+blender_agent/skills/sources/a-silent-voice-official-trailer-1080p/
+blender_agent/skills/sources/blue-box-official-trailer-netflix/
+blender_agent/skills/sources/sparkle-your-name-amv-2160p/
+blender_agent/skills/sources/the-fragrant-flower-blooms-with-dignity-official-trailer-net/
+blender_agent/skills/sources/the-garden-of-words-trailer-1080p/
 !tools/README.md
 !tools/environment.lock.txt
 !tools/blender-wrapper.sh

@@ -93,7 +93,10 @@ def transcribe(path: Path, out_json: Path, model_name="base.en"):
     run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(path), "-vn", "-ac", "1", "-ar", "16000", str(wav)])
     from faster_whisper import WhisperModel
     model = WhisperModel(model_name, device="cpu", compute_type="int8", cpu_threads=2)
-    segs, _ = model.transcribe(str(wav), vad_filter=True, beam_size=1, language="en")
+    # English-only models must be told English; multilingual ones (small, medium...) detect the language, which the
+    # Japanese-language trailers in reference vedios/ need
+    segs, info = model.transcribe(str(wav), vad_filter=True, beam_size=1, language="en" if model_name.endswith(".en") else None)
+    print(f"[whisper] {path.name}: detected language {getattr(info, 'language', '?')} (p={getattr(info, 'language_probability', 0):.2f})")
     out = [{"start": round(s.start, 2), "end": round(s.end, 2), "text": s.text.strip()} for s in segs]
     out_json.write_text(json.dumps(out, indent=1), encoding="utf-8")
     wav.unlink(missing_ok=True)

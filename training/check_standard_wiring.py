@@ -11,6 +11,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "blender_agent"))
 GROUPS = ["lighting", "motion", "physics", "composition", "colour", "transitions", "audio", "characters"]
+PIPELINE_FILES = ["ingest_reference.py", "describe_frames.py", "describe_audio.py", "detect_anime_faces.py", "write_shot_scripts.py",
+                  "check_script_completeness.py", "score_recreation.py", "calibrate_scores.py"]
 problems = []
 
 
@@ -33,6 +35,9 @@ need(skill.exists() and skill.read_text(encoding="utf-8").startswith("---\nname:
 agent = ROOT / ".claude" / "agents" / "frame-script-writer.md"
 text = agent.read_text(encoding="utf-8") if agent.exists() else ""
 need(re.search(r"^model: sonnet$", text, re.M) is not None and re.search(r"^effort: high$", text, re.M) is not None, "frame-script-writer agent missing or model/effort not pinned")
+
+for f in PIPELINE_FILES:
+    need((ROOT / "training" / f).exists(), f"the skill points at training/{f} but it does not exist")
 
 try:
     import director

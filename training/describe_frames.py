@@ -98,6 +98,7 @@ def measure_lighting(bgr, gray_u8, prev_mean_luma):
         "key_gradient_strength": r(grad_mag), "key_gradient_angle_deg": r(grad_angle, 1),
         "top_minus_bottom": r(g[:h // 3].mean() - g[-(h // 3):].mean()), "left_minus_right": r(g[:, :w // 3].mean() - g[:, -(w // 3):].mean()),
         "bloom": r(bloom), "vignette_corner_over_centre": r(corners / (centre + 1e-6)),
+        "luma_grid3x3": [r(g[gy * h // 3:(gy + 1) * h // 3, gx * w // 3:(gx + 1) * w // 3].mean()) for gy in range(3) for gx in range(3)],
         "exposure_delta": None if prev_mean_luma is None else r(mean_luma - prev_mean_luma),
     }, mean_luma
 
@@ -138,7 +139,7 @@ def measure_motion_and_physics(prev_gray, gray, prev_bgr, bgr):
         return (none_cam, {k: None for k in ("mean_speed", "p95_speed", "moving_share", "direction_deg", "coherence", "direction_hist8",
                                              "divergence", "curl", "cadence_mad", "new_drawing")},
                 {k: None for k in ("particle_count", "particle_vx", "particle_vy", "fall_speed", "downward_share", "streakiness",
-                                   "roundness", "turbulence")},
+                                   "roundness", "turbulence", "particle_area_share", "large_motion_share", "particle_spread")},
                 {"fast_layer_share": None, "layer_speed_ratio": None})
     h, w = gray.shape
     flow = cv2.calcOpticalFlowFarneback(prev_gray, gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
@@ -183,12 +184,15 @@ def measure_motion_and_physics(prev_gray, gray, prev_bgr, bgr):
 
     # particles: small moving blobs (petals, snow, rain, dust, sparks). Their mean velocity is the gravity/wind direction.
     mask = cv2.morphologyEx(moving.astype(np.uint8), cv2.MORPH_OPEN, np.ones((2, 2), np.uint8))
-    n, labels, stats, _ = cv2.connectedComponentsWithStats(mask)
-    blob_v, aspect, round_ = [], [], []
+    n, labels, stats, cents = cv2.connectedComponentsWithStats(mask)
+    blob_v, aspect, round_, blob_xy, particle_area = [], [], [], [], 0
+    large_area = int(sum(stats[k, cv2.CC_STAT_AREA] for k in range(1, n) if stats[k, cv2.CC_STAT_AREA] > PARTICLE_AREA_PX[1]))
     for k in range(1, n):
         area = stats[k, cv2.CC_STAT_AREA]
         if not (PARTICLE_AREA_PX[0] <= area <= PARTICLE_AREA_PX[1]):
             continue
+        blob_xy.append((cents[k][0] / w, cents[k][1] / h))
+        particle_area += int(area)
         bw, bh = stats[k, cv2.CC_STAT_WIDTH], stats[k, cv2.CC_STAT_HEIGHT]
         sel = labels == k
         blob_v.append((float(res[:, :, 0][sel].mean()), float(res[:, :, 1][sel].mean())))
@@ -199,10 +203,14 @@ def measure_motion_and_physics(prev_gray, gray, prev_bgr, bgr):
         physics = {"particle_count": len(blob_v), "particle_vx": r(bv[:, 0].mean() / w, 5), "particle_vy": r(bv[:, 1].mean() / w, 5),
                    "fall_speed": r(max(bv[:, 1].mean(), 0) / w, 5), "downward_share": r((bv[:, 1] > 0.2).mean(), 3),
                    "streakiness": r(np.mean(aspect), 3), "roundness": r(np.mean(round_), 3),
-                   "turbulence": r((bv[:, 0].std() + bv[:, 1].std()) / w, 5)}
+                   "turbulence": r((bv[:, 0].std() + bv[:, 1].std()) / w, 5),
+                   "particle_area_share": r(particle_area / (h * w), 5),
+                   "large_motion_share": r(large_area / (h * w), 5),
+                   "particle_spread": r(float(np.mean(np.std(np.array(blob_xy), axis=0))), 4) if len(blob_xy) > 1 else 0.0}
     else:
-        physics = {"particle_count": 0, **{k: None for k in ("particle_vx", "particle_vy", "fall_speed", "downward_share", "streakiness",
-                                                              "roundness", "turbulence")}}
+        physics = {"particle_count": 0, "large_motion_share": r(large_area / (h * w), 5),
+                   **{k: None for k in ("particle_vx", "particle_vy", "fall_speed", "downward_share", "streakiness",
+                                        "roundness", "turbulence", "particle_area_share", "particle_spread")}}
 
     # parallax: split the RAW flow into a fast and a slow layer (Otsu). Foreground moves faster than background under a pan.
     raw = np.hypot(flow[:, :, 0], flow[:, :, 1])
@@ -258,6 +266,24 @@ def measure_depth_and_composition(bgr, gray_u8):
     return depth, comp
 
 
+# ----------------------------------------------------------------------------- text on screen
+SUBTITLE_PRESENT_ABOVE = 0.0005     # calibrated on a real trailer: no-subtitle frames score exactly 0, a short line scores ~0.0015
+
+
+def measure_text_overlay(bgr, crop):
+    """Burned-in subtitles: white strokes with a dark outline in the lower band. Says WHETHER text is on screen and how much;
+    what it says is NOT MEASURED here (Whisper gives the spoken words, OCR is not installed). Corner logos are NOT MEASURED."""
+    x0, y0, x1, y1 = crop
+    im = bgr[y0:y1, x0:x1]
+    h, w = im.shape[:2]
+    band = im[int(h * 0.72):, int(w * 0.10):int(w * 0.90)]
+    white = (band.min(axis=2) > 235).astype(np.uint8)
+    dark = (band.max(axis=2) < 60).astype(np.uint8)
+    share = float((white & cv2.dilate(dark, np.ones((5, 5), np.uint8))).mean())
+    return {"subtitle_stroke_share": r(share, 5), "subtitle_present": share > SUBTITLE_PRESENT_ABOVE,
+            "text_content": "NOT MEASURED", "corner_logo": "NOT MEASURED"}
+
+
 # ----------------------------------------------------------------------------- transitions
 def measure_transition(prev_small, cur_small, next_small, cur_mean_luma):
     """Scores at 80 px width; interpretation (cut vs dissolve vs fade) happens per shot in write_shot_scripts.py."""
@@ -283,9 +309,10 @@ def measure_transition(prev_small, cur_small, next_small, cur_mean_luma):
 def describe_chunk(args):
     """args = (paths, first_index, pad_before, pad_after, crop, fps). Rows for the frames after pad_before and before pad_after."""
     paths, first_index, pad_before, pad_after, crop, fps = args
-    prepared = []
+    prepared, full = [], []
     for p in paths:
         bgr = cv2.imread(str(p))
+        full.append(bgr)
         prepared.append(prepare_frame(bgr, crop))
     smalls = [cv2.resize(g, (80, max(2, int(g.shape[0] * 80 / g.shape[1]))), interpolation=cv2.INTER_AREA) for _, g in prepared]
 
@@ -303,6 +330,7 @@ def describe_chunk(args):
         idx = first_index + (k - pad_before)
         rows.append({"frame": idx, "t": r(idx / fps, 4), "lighting": light, "colour": measure_colour(bgr),
                      "camera": cam, "motion": motion, "physics": physics, "depth": depth, "composition": comp,
+                     "text_on_screen": measure_text_overlay(full[k], crop),
                      "transition": measure_transition(smalls[k - 1] if k > 0 else None, smalls[k],
                                                       smalls[k + 1] if k + 1 < len(smalls) else None, luma)})
         prev_luma = luma

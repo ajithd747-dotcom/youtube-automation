@@ -78,12 +78,45 @@ colour balance, DoF), each with `source_metric` and `confidence`.
 
 ```
 training/
-  ingest_reference.py      frames + per-frame table + shots + audio, all references, all cores
+  ingest_reference.py      frames + per-frame table + shots + audio, all references, all cores (12 cores: 19,639 frames in ~2 min)
+  describe_frames.py       Layer A measurements per frame (lighting, colour, motion, physics, depth, composition, transitions, text)
+  describe_audio.py        Layer A audio per frame
+  detect_anime_faces.py    characters per frame (OpenCV 4 in tools/cv4; cascade in tools/models)
+  write_shot_scripts.py    Layer B: one script per shot + contact sheet for the vision pass
+  check_script_completeness.py   audit: groups present, no placeholders, every Blender directive sourced
+  check_standard_wiring.py fails if the standard is unwired from CLAUDE.md / skill / agent / Blender agent
   score_recreation.py      per-frame scoring + worst-frame montage
   calibrate_scores.py      what scores do known-bad recreations get
   reference/<slug>/        (gitignored) meta.json frames/f_00001.jpg frames_table.jsonl shots.json audio.wav
   runs/<slug>/<run>/       (gitignored) recreated frames + scores per iteration
 ```
+
+## Calibration (measured 2026-09-20, Fragrant Flower trailer, 100 frames, `calibrate_scores.py`)
+
+| degradation of the real frame | frame_score | ssim | hist | edge_f1 |
+|---|---|---|---|---|
+| identical | 1.000 | 1.000 | 1.000 | 1.000 |
+| jpeg q15 | 0.891 | 0.912 | 0.797 | 0.947 |
+| shifted 3 frames | 0.854 | 0.845 | 0.904 | 0.796 |
+| posterised 8 levels | 0.834 | 0.890 | 0.646 | 0.950 |
+| blur sigma 2 | 0.814 | 0.891 | 0.962 | 0.474 |
+| blur sigma 10 | 0.621 | 0.763 | 0.879 | 0.010 |
+| mirrored | 0.600 | 0.537 | 0.986 | 0.313 |
+| blur sigma 25 (colour layout only) | 0.581 | 0.737 | 0.784 | 0.010 |
+| flat frame / shot mean colour | 0.39 | 0.65 | 0.25 | 0.010 |
+| another video, same frame index | 0.253 | 0.368 | 0.160 | 0.117 |
+
+Reading it: getting the colour layout right alone is worth ~0.4-0.6; only line work (edge_f1) and structure carry a
+recreation past ~0.8. Anime holds drawings for 2-3 frames, so a 3-frame timing error costs little (0.85).
+
+## Known measurement limits (found by looking at real frames, not assumed)
+
+- Particles: pixel statistics cannot separate particle fields from dappled light or animated logos (false positives) and
+  miss rain that merges into large regions (false negative). The script therefore only records a *candidate* with
+  `needs_visual_confirmation`; the vision pass decides (`semantic.weather_particles_seen`).
+- Faces: the anime cascade misses faces (about half in a two-character frame); 0 detections is not "no character".
+- Saliency box is crude; burned-in subtitles and streaming logos contaminate edge/composition numbers. Subtitle
+  presence is measured per frame and masked out of scoring; corner logos are masked by fixed regions.
 
 ## Hard limits
 
