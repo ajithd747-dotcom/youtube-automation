@@ -13,6 +13,9 @@ def find_blender() -> str:
     env = os.environ.get("BLENDER_PATH")
     if env and Path(env).exists():
         return env
+    project_blender = Path(__file__).resolve().parent.parent / "tools" / "blender-wrapper.sh"
+    if project_blender.exists():
+        return str(project_blender)
     found = shutil.which("blender")
     if found:
         return found
@@ -21,7 +24,7 @@ def find_blender() -> str:
         if candidate.exists():
             return str(candidate)
     raise FileNotFoundError("Blender not found. Put the Blender 4.5 LTS `blender` launcher on PATH "
-                            "(e.g. ~/.local/bin/blender) or set BLENDER_PATH to it")
+                            "(tools/blender-wrapper.sh) or set BLENDER_PATH to it")
 
 
 def run_job(job: dict, timeout=7200) -> dict:

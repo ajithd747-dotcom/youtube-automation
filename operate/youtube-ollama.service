@@ -1,0 +1,17 @@
+[Unit]
+# Local LLM server for the pipeline (ollama_client.py, scripts/generate_script.py). CPU-only box: 12 cores, 30 GB RAM.
+# Binary, libraries and downloaded models all live inside the project (tools/ollama), never in ~/.ollama.
+Description=youtube-automation Ollama server (loopback only)
+After=network.target
+
+[Service]
+Type=simple
+Environment=OLLAMA_HOST=127.0.0.1:11434
+Environment=OLLAMA_MODELS=%h/youtube-automation/tools/ollama/models
+Environment=OLLAMA_KEEP_ALIVE=30m
+ExecStart=%h/youtube-automation/tools/ollama/bin/ollama serve
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

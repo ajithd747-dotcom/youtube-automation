@@ -12,11 +12,10 @@ Current automation mode: **fully autonomous** (no human-review checkpoint). Note
 
 ## Local LLM (Ollama)
 
-Ollama is installed locally and serves models at `http://localhost:11434`.
+Ollama runs from inside the project (`tools/ollama`, models in `tools/ollama/models`) as the `youtube-ollama` user service and serves
+`http://127.0.0.1:11434`. See `operate/README.md`.
 
-- Model in use: `llama3.2:1b` (chosen for this machine's specs: 2-core CPU, ~6GB RAM, no discrete GPU)
-- Start the server if it's not already running: `ollama serve`
-- Test from the CLI: `ollama run llama3.2:1b`
+- Model in use: `llama3.2:1b` (this machine: 12 CPU cores, 30 GB RAM, no GPU)
 - Test from Python: `python ollama_client.py`
-
-To use a different/larger model later: `ollama pull <model>` (see https://ollama.com/library).
+- Also the last free fallback provider in `llm_router.py`, so the Blender agent plans with an LLM even without cloud API keys.
+- Another model: `tools/ollama/bin/ollama pull <model>` (see https://ollama.com/library).

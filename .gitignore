@@ -63,6 +63,11 @@ Thumbs.db
 # Redistributable but not ours to vendor, and all re-downloadable. See agents/ docs.
 agents/tools_bin/
 blender_agent/tools_bin/
+# project-local toolchain (Blender, ffmpeg, conda env, Ollama + models): rebuilt per tools/README.md
+tools/*
+!tools/README.md
+!tools/environment.lock.txt
+!tools/blender-wrapper.sh
 *.sf2
 *.dll
 *.exe

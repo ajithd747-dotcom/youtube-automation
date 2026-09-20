@@ -31,6 +31,9 @@ PROVIDERS = [
     {"name": "fireworks", "env": "FIREWORKS_API_KEY", "base_url": "https://api.fireworks.ai/inference/v1", "model": "accounts/fireworks/models/llama-v3p1-8b-instruct"},
     {"name": "alibaba", "env": "ALIBABA_CLOUD_API_KEY", "base_url": "https://dashscope-intl.aliyuncs.com/compatible-mode/v1", "model": "qwen-turbo"},
     {"name": "zai", "env": "ZAI_API_KEY", "base_url": "https://api.z.ai/api/paas/v4", "model": "glm-4.5-flash"},
+    # Local Ollama (tools/ollama, served by operate/youtube-ollama.service): free, keyless, CPU-only, so it ranks
+    # after every cloud provider that has a key and ahead of the paid one.
+    {"name": "ollama", "env": None, "local": True, "base_url": "http://127.0.0.1:11434/v1", "model": "llama3.2:1b", "timeout": 300},
     {"name": "kimi", "env": "KIMI_API_KEY", "base_url": "https://api.moonshot.ai/v1", "model": "moonshot-v1-8k", "paid": True},
 ]
 
@@ -67,7 +70,7 @@ def generate(prompt: str, system: str = None) -> str:
 
     errors = []
     for provider in PROVIDERS:
-        api_key = os.environ.get(provider["env"])
+        api_key = "ollama" if provider.get("local") else os.environ.get(provider["env"])
         if not api_key:
             continue
         if _is_in_cooldown(provider["name"], cooldowns):
@@ -78,7 +81,7 @@ def generate(prompt: str, system: str = None) -> str:
             response = client.chat.completions.create(
                 model=provider["model"],
                 messages=messages,
-                timeout=30,
+                timeout=provider.get("timeout", 30),
             )
             content = response.choices[0].message.content
             if not content or not content.strip():

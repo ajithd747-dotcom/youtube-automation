@@ -61,7 +61,7 @@ export LD_LIBRARY_PATH="$LIBS\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"
 export LIBGL_DRIVERS_PATH="$ROOT/usr/lib/x86_64-linux-gnu/dri"
 export __EGL_VENDOR_LIBRARY_DIRS="$ROOT/usr/share/glvnd/egl_vendor.d"
 export LIBGL_ALWAYS_SOFTWARE=1 GALLIUM_DRIVER=llvmpipe
-exec "\${BLENDER_PATH:-\$(command -v blender)}" "\$@"
+exec "\${BLENDER_PATH:-$(cd "$HERE/../.." && pwd)/tools/blender-wrapper.sh}" "\$@"
 EOF
 chmod +x "$TOOLS/Xvfb" "$TOOLS/xdotool" "$TOOLS/blender-gui"
 echo "installed in $TOOLS: Xvfb  xdotool  blender-gui"
