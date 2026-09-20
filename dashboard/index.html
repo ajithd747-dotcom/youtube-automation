@@ -65,6 +65,14 @@
   kbd { background: var(--chip); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: 11px; }
   #saved { color: var(--ok); font-size: 12px; opacity: 0; transition: opacity .3s; }
   #saved.show { opacity: 1; }
+  #uploads { position: fixed; right: 16px; bottom: 16px; width: 340px; max-height: 50vh; overflow: auto; z-index: 20; display: grid; gap: 8px; }
+  .up { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; box-shadow: 0 4px 16px rgba(0,0,0,.18); }
+  .up .nm { font-weight: 550; word-break: break-all; }
+  .up .bar { height: 6px; border-radius: 3px; background: var(--chip); margin: 6px 0 4px; overflow: hidden; }
+  .up .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+  .up.done .bar i { background: var(--ok); } .up.failed .bar i { background: var(--bad); }
+  .up.failed .msg { color: var(--bad); } .up.done .msg { color: var(--ok); }
+  body.dragging::after { content: "Drop videos to upload to reference vedios"; position: fixed; inset: 12px; z-index: 30; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 650; color: var(--accent); background: color-mix(in srgb, var(--bg) 88%, transparent); border: 3px dashed var(--accent); border-radius: 16px; pointer-events: none; }
   @media (max-width: 900px) { .layout { grid-template-columns: 1fr; padding: 12px; } aside { position: static; height: 360px; } .cols { grid-template-columns: 1fr; } }
 </style>
 </head>
@@ -73,8 +81,11 @@
   <h1>Video review</h1><span class="sub" id="counts"></span>
   <span class="spacer"></span>
   <label class="row hint" style="margin:0"><input type="checkbox" id="autonext"> autoplay next</label>
+  <button id="upload" class="primary" title="Send videos from this computer into the reference vedios folder on the server">Upload reference videos</button>
+  <input type="file" id="uploadInput" accept="video/*,.mkv,.m4v" multiple hidden>
   <button id="refresh" title="Rescan folders">Refresh</button>
 </header>
+<div id="uploads"></div>
 
 <div class="layout">
   <aside>
@@ -118,7 +129,7 @@
       <h2>Upload command <span class="hint">(nothing is uploaded from this page)</span></h2>
       <pre id="cmd"></pre>
       <div class="row" style="margin-top:8px"><button class="primary" id="copy">Copy command</button>
-        <span class="hint">Run it in a terminal from <b>D:\youtube automation</b>. Default privacy is private.</span></div>
+        <span class="hint">Run it in a terminal from <b>~/youtube-automation</b>. Default privacy is private.</span></div>
       <p class="hint" style="margin:10px 0 0">Shortcuts: <kbd>Space</kbd> play/pause · <kbd>←</kbd><kbd>→</kbd> seek 5s · <kbd>N</kbd>/<kbd>P</kbd> next/prev · <kbd>A</kbd> approve · <kbd>R</kbd> reject · <kbd>F</kbd> fullscreen</p>
     </div>
   </main>
@@ -219,8 +230,8 @@ function renderChecks(v) {
 
 function renderCmd() {
   const v = videos.find(x => x.id === selected); if (!v) return;
-  const q = s => "'" + String(s).replace(/'/g, "''") + "'";
-  $('#cmd').textContent = `python upload/youtube_upload.py ${q(v.rel.replace(/\//g, '\\'))} ${q($('#title').value)} ${q($('#desc').value)}`;
+  const q = s => "'" + String(s).replace(/'/g, "'\\''") + "'";
+  $('#cmd').textContent = `python upload/youtube_upload.py ${q(v.rel)} ${q($('#title').value)} ${q($('#desc').value)}`;
 }
 
 function save() {
@@ -270,6 +281,69 @@ document.addEventListener('keydown', e => {
   else if (p && k === 'arrowright') p.currentTime += 5; else if (p && k === 'arrowleft') p.currentTime -= 5;
   else if (p && k === ' ') { e.preventDefault(); p.paused ? p.play() : p.pause(); }
 });
+
+// ---- upload: send each file in sequential CHUNK-byte POSTs so a tunnel's per-request size cap never applies
+const CHUNK = 16 * 1024 * 1024, CHUNK_RETRIES = 5;
+
+async function sendChunk(file, offset, panel) {
+  const end = Math.min(offset + CHUNK, file.size);
+  const url = `/api/upload?name=${encodeURIComponent(file.name)}&offset=${offset}&total=${file.size}`;
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/octet-stream' }, body: file.slice(offset, end) });
+      const j = await r.json().catch(() => ({}));
+      if (r.ok) return j;
+      if (r.status === 409 && Number.isInteger(j.received)) return { resync: j.received };  // server holds a different amount: continue from there
+      throw new Error(j.error || `HTTP ${r.status}`);
+    } catch (e) {
+      const fatal = /not an accepted|not enough free|not a readable|larger than|HTTP 40[013]|HTTP 41|HTTP 422|HTTP 507/.test(e.message);
+      if (fatal || attempt >= CHUNK_RETRIES) throw e;
+      panel.msg.textContent = `retrying (${attempt}/${CHUNK_RETRIES}) - ${e.message}`;
+      await new Promise(res => setTimeout(res, 1000 * attempt));
+    }
+  }
+}
+
+async function uploadFile(file) {
+  const el = document.createElement('div');
+  el.className = 'up';
+  el.innerHTML = `<div class="nm"></div><div class="bar"><i></i></div><div class="msg hint"></div>`;
+  el.querySelector('.nm').textContent = file.name;
+  const panel = { msg: el.querySelector('.msg'), bar: el.querySelector('.bar i') };
+  $('#uploads').appendChild(el);
+  el.addEventListener('click', () => { if (el.classList.contains('done') || el.classList.contains('failed')) el.remove(); });  // click a finished panel to dismiss
+  let offset = 0;
+  try {
+    while (offset < file.size) {
+      const j = await sendChunk(file, offset, panel);
+      offset = j.resync !== undefined ? j.resync : Math.min(offset + CHUNK, file.size);
+      panel.bar.style.width = (100 * offset / file.size).toFixed(1) + '%';
+      panel.msg.textContent = `${fmtSize(offset)} of ${fmtSize(file.size)}`;
+      if (j.done) { el.classList.add('done'); panel.msg.textContent = `Saved as ${j.name} (${fmtSize(j.size)})`; return true; }
+    }
+    throw new Error('server never confirmed the last chunk');
+  } catch (e) {
+    el.classList.add('failed'); panel.msg.textContent = 'Failed: ' + e.message;
+    return false;
+  }
+}
+
+async function uploadFiles(files) {
+  const list = [...files].filter(f => f.size > 0);
+  if (!list.length) return;
+  let saved = 0;
+  for (const f of list) if (await uploadFile(f)) saved++;   // one at a time: parallel uploads only fight for the same uplink
+  if (saved) await load();
+}
+
+$('#upload').addEventListener('click', () => $('#uploadInput').click());
+$('#uploadInput').addEventListener('change', e => { uploadFiles(e.target.files); e.target.value = ''; });
+let dragDepth = 0;
+const hasFiles = e => e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+addEventListener('dragenter', e => { if (hasFiles(e)) { dragDepth++; document.body.classList.add('dragging'); } });
+addEventListener('dragleave', e => { if (hasFiles(e) && --dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dragging'); } });
+addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+addEventListener('drop', e => { if (!hasFiles(e)) return; e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragging'); uploadFiles(e.dataTransfer.files); });
 
 load(false).then(() => { const first = visible()[0]; if (first) select(first.id); });
 </script>

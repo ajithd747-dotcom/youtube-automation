@@ -4,32 +4,50 @@
 
 Serves only video files found under the whitelisted folders below (by id, never by raw path), with HTTP Range
 support so seeking works. Binds to localhost only. Review notes are saved to dashboard/review.json.
+
+Remote access: set DASHBOARD_PASSWORD and every request must carry it (HTTP Basic, any username). Reach it from
+anywhere through a tunnel to 127.0.0.1 -- see operate/README.md. With no password set it stays open, which is only
+acceptable while nothing but this machine can reach the port.
 """
+import base64
 import hashlib
+import hmac
 import json
 import mimetypes
+import os
 import re
+import shutil
 import subprocess
 import sys
 import threading
+import unicodedata
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import parse_qs, unquote, urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 HERE = Path(__file__).resolve().parent
 THUMBS = HERE / ".thumbs"
 REVIEW = HERE / "review.json"
 PORT = 8765
+PASSWORD = os.environ.get("DASHBOARD_PASSWORD", "")
 EXTS = {".mp4", ".webm", ".mov", ".mkv", ".m4v"}
 
 # (folder, recursive) -> group classifier below
 SOURCES = [(ROOT / "video", False), (ROOT / "blender_agent" / "work", True), (ROOT / "reference vedios", True),
            (ROOT / "recreate" / "out", False)]
 
+# Uploads arrive as sequential raw-byte chunks (one POST each) so a file of any size passes a tunnel that caps a
+# single request body (Cloudflare's free tier: 100 MB). The bytes accumulate in "<name>.part", which scan() ignores,
+# and become "<name>" only after the last chunk lands and ffprobe can read it.
+REFERENCE_DIR = ROOT / "reference vedios"
+UPLOAD_CHUNK_MAX = 64 * 1024 * 1024
+UPLOAD_DISK_HEADROOM = 2 * 1024 ** 3
+
 _meta_cache = {}
 _lock = threading.Lock()
+_upload_lock = threading.Lock()
 
 
 def vid_id(path: Path) -> str:
@@ -130,6 +148,52 @@ def thumb_for(path: Path):
     return out if out.exists() else None
 
 
+def sanitise_upload_name(raw: str):
+    """Bare file name safe to create inside REFERENCE_DIR, or None when it is not a video name we accept."""
+    name = unicodedata.normalize("NFC", raw).replace("\\", "/").rsplit("/", 1)[-1]
+    stem, ext = os.path.splitext(re.sub(r"[^\w .()\[\]-]", "_", name).strip(" ."))
+    if ext.lower() not in EXTS or not stem.strip(" ._-"):
+        return None
+    return stem[:120].rstrip(" .") + ext.lower()
+
+
+def choose_free_name(name: str) -> str:
+    """`name` if unused in REFERENCE_DIR, else `stem (2).ext`, `stem (3).ext` ... -- never overwrites an existing video."""
+    stem, ext = os.path.splitext(name)
+    candidate, n = name, 1
+    while (REFERENCE_DIR / candidate).exists():
+        n += 1
+        candidate = f"{stem} ({n}){ext}"
+    return candidate
+
+
+def receive_upload_chunk(name: str, offset: int, total: int, body: bytes):
+    """Append one chunk to REFERENCE_DIR/<name>.part; (http_status, json_dict). The final chunk publishes the file."""
+    with _upload_lock:
+        REFERENCE_DIR.mkdir(exist_ok=True)
+        part = REFERENCE_DIR / (name + ".part")
+        if offset == 0:
+            if shutil.disk_usage(REFERENCE_DIR).free < total + UPLOAD_DISK_HEADROOM:
+                return 507, {"error": "not enough free disk space on the server"}
+            part.write_bytes(b"")
+        have = part.stat().st_size if part.exists() else 0
+        if have != offset:
+            return 409, {"error": "chunk offset does not match what the server holds", "received": have}
+        if offset + len(body) > total:
+            part.unlink(missing_ok=True)
+            return 400, {"error": "upload is larger than the announced size"}
+        with open(part, "ab") as fh:
+            fh.write(body)
+        if offset + len(body) < total:
+            return 200, {"done": False, "received": offset + len(body)}
+        final = REFERENCE_DIR / choose_free_name(name)
+        part.rename(final)
+    if not probe(final)["duration"]:
+        final.unlink(missing_ok=True)
+        return 422, {"error": "file is not a readable video (ffprobe found no duration)"}
+    return 200, {"done": True, "name": final.name, "size": total}
+
+
 def load_review():
     try:
         return json.loads(REVIEW.read_text(encoding="utf-8"))
@@ -152,6 +216,49 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header(k, v)
         self.end_headers()
         self.wfile.write(body)
+
+    def is_authorised(self) -> bool:
+        """True when no password is configured, or the request carries it as the HTTP Basic password."""
+        if not PASSWORD:
+            return True
+        header = self.headers.get("Authorization", "")
+        if header.startswith("Basic "):
+            try:
+                given = base64.b64decode(header[6:]).decode("utf-8", "ignore").partition(":")[2]
+            except ValueError:
+                return False
+            return hmac.compare_digest(given.encode(), PASSWORD.encode())
+        return False
+
+    def refuse_unauthorised(self):
+        self.close_connection = True  # the unread request body must not be parsed as the next request
+        self._send(401, b"password required", "text/plain", {"WWW-Authenticate": 'Basic realm="video review"'})
+
+    def handle_upload_chunk(self):
+        """POST /api/upload?name=<file>&offset=<bytes so far>&total=<file bytes>, body = the raw next chunk."""
+        query = parse_qs(urlparse(self.path).query)
+        try:
+            name = sanitise_upload_name(query.get("name", [""])[0])
+            offset, total = int(query.get("offset", [""])[0]), int(query.get("total", [""])[0])
+            length = int(self.headers.get("Content-Length") or 0)
+        except ValueError:
+            name, offset, total, length = None, -1, 0, 0
+        problem = None
+        if name is None:
+            problem = (400, "not an accepted video file name (allowed: " + ", ".join(sorted(EXTS)) + ")")
+        elif offset < 0 or total <= 0 or length <= 0:
+            problem = (400, "bad offset, total or empty chunk")
+        elif length > UPLOAD_CHUNK_MAX:
+            problem = (413, f"chunk larger than {UPLOAD_CHUNK_MAX} bytes")
+        if problem:
+            self.close_connection = True
+            return self._send(problem[0], json.dumps({"error": problem[1]}).encode())
+        body = self.rfile.read(length)
+        if len(body) != length:
+            self.close_connection = True
+            return
+        code, result = receive_upload_chunk(name, offset, total, body)
+        self._send(code, json.dumps(result).encode())
 
     def _file(self, path: Path, ctype: str):
         size = path.stat().st_size
@@ -188,6 +295,8 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         try:
+            if not self.is_authorised():
+                return self.refuse_unauthorised()
             url = urlparse(self.path).path
             if url in ("/", "/index.html"):
                 return self._send(200, (HERE / "index.html").read_bytes(), "text/html; charset=utf-8")
@@ -208,7 +317,12 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         try:
-            if urlparse(self.path).path != "/api/review":
+            if not self.is_authorised():
+                return self.refuse_unauthorised()
+            path = urlparse(self.path).path
+            if path == "/api/upload":
+                return self.handle_upload_chunk()
+            if path != "/api/review":
                 return self._send(404, b"not found", "text/plain")
             n = int(self.headers.get("Content-Length") or 0)
             data = json.loads(self.rfile.read(n) or b"{}")

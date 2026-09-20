@@ -1,0 +1,16 @@
+[Unit]
+Description=youtube-automation video review dashboard (password protected, loopback only)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/youtube-automation
+# DASHBOARD_PASSWORD lives outside the repo, mode 600.
+EnvironmentFile=%h/.config/youtube-automation/dashboard.env
+Environment=PATH=%h/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=%h/youtube-automation/.venv/bin/python dashboard/server.py --no-browser
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,18 @@
+[Unit]
+# Public URL for the dashboard without an inbound port: cloudflared dials out and Cloudflare proxies back.
+# Quick-tunnel form (free, no account): the hostname is random and CHANGES on every restart of this unit.
+# Read the current one with dashboard/remote_access/read_dashboard_url.sh. The password on the server is the
+# only gate -- the URL is unguessable but not secret.
+# A URL that never changes needs a named tunnel: a Cloudflare account and a browser login only the owner can do.
+Description=youtube-automation dashboard public tunnel (cloudflared quick tunnel)
+After=network-online.target youtube-dashboard.service
+Wants=network-online.target youtube-dashboard.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8765
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target
