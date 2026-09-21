@@ -12,10 +12,11 @@ plain names `blender`, `ffmpeg`, `ffprobe`, `cloudflared`, `micromamba` work on 
 | `mamba/` | micromamba's package cache for that env | recreated by the command above |
 | `bin/` | static `ffmpeg`, `ffprobe` (johnvansickle.com build, has libass but **no drawtext**), `cloudflared`, `micromamba` | download the static builds |
 | `hf/` | Hugging Face cache (`HF_HOME`): skytnt/anime-seg ONNX, hysts/anime-face-detector weights | downloaded on first use by the training scripts |
+| `torch/` | `TORCH_HOME`: AlexNet weights for the `lpips_holdout` metric | downloaded on first use by training/score_recreation.py |
 | `ollama/` | Ollama server + `models/` (llama3.2:1b) | release tarball `ollama-linux-amd64.tar.zst` from github.com/ollama/ollama, unpack with `tools/env/bin/zstd -dc ... | tar -x` |
 
 Python packages live in `.venv` (uv). Beyond the base set, the training measurements need
-`uv pip install --python .venv/bin/python anime-face-detector "torch==<installed>"` (adds torchvision; pin torch so it is not replaced).
+`uv pip install --python .venv/bin/python anime-face-detector "torch==<installed>"` (adds torchvision; pin torch so it is not replaced), and `lpips` for the perceptual holdout.
 
 Related installs kept beside their users: `agents/tools_bin/` (FluidSynth shim + GeneralUser GS soundfont),
 `blender_agent/tools_bin/` (Xvfb, xdotool, software GL for the GUI recorder; `setup_virtual_display.sh` rebuilds it).
