@@ -258,3 +258,25 @@ and corrected until within 0.3 LU. recreate_video.py now encodes the mastered mi
 
 What is left of the distance: key mismatch (0.3), spectral centroid 24% low (0.24), loudness range 2.4 LU narrower (0.24).
 Fragrant v2 was already running with the old encoder; its audio gets re-encoded when it finishes.
+
+## 2026-09-21 -- measured face structure: anime face landmarks place the face (first holdout gain from content)
+
+training/measure_face_landmarks.py: hysts/anime-face-detector 0.1.0 (YOLOv3 box + HRNetV2 28 landmarks, plain PyTorch,
+~1 s/frame on CPU) on the outline keyframes -> `characters.face_landmarks` in the script. Fragrant: faces in 40 of 63
+shots, including S32 (blond boy) where the cascade found none; write_shot_scripts.py now uses the landmark box as the
+second fallback for the face box (after the cascade, before the outline-derived box).
+Blender (`face_from_landmarks`): a flat skin face on the jaw contour closed just above the brows, eye whites on the hull of
+each eye's 6 points, iris + shine inside, ink lash lines, brows, jaw line and mouth through the measured points (ink colour
+and width from characters.line_art). Replaces the head ellipsoid; hair/body shape tuned as in rung 5
+(`tune_character_shape.py --landmark-face`).
+
+| shot | rung 5 ellipsoid: frame_score / edge_f1 / holdout | landmark face |
+|---|---|---|
+| FF 27 | 0.560 / 0.261 / 0.513 | 0.589 / 0.383 / 0.516 |
+| FF 50 | 0.444 / 0.116 / 0.394 | 0.426 / 0.183 / 0.398 |
+
+Holdout rises on both -- small (+0.003 / +0.004), but every earlier content step (proxy colours, silhouettes, outlines,
+parametric eyes, line art) left it flat or lowered it. edge_f1 up on both. frame_score falls on 50 through hist
+(0.49 -> 0.41): the flat face plane is lit evenly where the ellipsoid had a gradient, and the girl's face is bright with
+blush. Next: cel shading of the face plane from the measured light direction, landmarks animated across keyframes
+(mouth, blinks), S32 once Fragrant v2 finishes (its box changes).

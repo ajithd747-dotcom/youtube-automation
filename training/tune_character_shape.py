@@ -47,7 +47,7 @@ def probe_scores(D, spec, lo, rect, candidates, probe, work):
     return out
 
 
-def run(slug, shot, rounds=8, n_probe=3, style="ellipsoid", features=False):
+def run(slug, shot, rounds=8, n_probe=3, style="ellipsoid", features=False, landmark_face=False):
     D = L3.find_reference(slug)
     meta = json.loads((D / "meta.json").read_text(encoding="utf-8"))
     rect = meta["content_rect_640"]
@@ -56,6 +56,10 @@ def run(slug, shot, rounds=8, n_probe=3, style="ellipsoid", features=False):
     spec = L3.build_scene_spec(script)
     spec["character_style"] = style
     spec["face_features"] = features
+    if landmark_face:
+        if not spec.get("landmarks"):
+            sys.exit("no measured face landmarks for this shot (run training/measure_face_landmarks.py, then write_shot_scripts.py)")
+        spec["face_from_landmarks"] = True
     steps = {**SHAPE_STEPS, **(SILHOUETTE_STEPS if style == "silhouette" else {})}
     if style == "outline":
         if not spec.get("outline"):
@@ -65,9 +69,11 @@ def run(slug, shot, rounds=8, n_probe=3, style="ellipsoid", features=False):
         sys.exit("no character proxy for this shot (needs semantic characters + a detected face box)")
     rung4 = json.loads((HERE / "runs" / D.name / f"level4_shot{shot:02d}" / "report.json").read_text(encoding="utf-8"))
     params = {**rung4["params_tuned"], "shape": dict(DEFAULT_SHAPE)}
-    tag = f"level5_shot{shot:02d}" + ("" if style == "ellipsoid" else f"_{style}") + ("_features" if features else "")
+    tag = f"level5_shot{shot:02d}" + ("" if style == "ellipsoid" else f"_{style}") + ("_features" if features else "") + ("_lmface" if landmark_face else "")
     if features:
         steps = {**steps, **FEATURE_STEPS}
+    if landmark_face:                                          # the face is measured: only hair and body stay free
+        steps = {k: v for k, v in steps.items() if not k.startswith(("head_", "eye_", "mouth_"))}
     work = HERE / "runs" / D.name / tag
     probe = sorted({int(v) for v in np.linspace(0, spec["frames"] - 1, n_probe)})
     t0 = time.time()
@@ -96,7 +102,7 @@ def run(slug, shot, rounds=8, n_probe=3, style="ellipsoid", features=False):
             break
     before = L3.render_and_score(D, spec, {**rung4["params_tuned"], "shape": dict(DEFAULT_SHAPE)}, lo, f"{tag}/before", rect)
     after = L3.render_and_score(D, spec, params, lo, f"{tag}/after", rect)
-    report = {"slug": D.name, "shot": shot, "style": style, "face_features": features, "probe_frames": probe, "seconds_wall": round(time.time() - t0, 1),
+    report = {"slug": D.name, "shot": shot, "style": style, "face_features": features, "landmark_face": landmark_face, "probe_frames": probe, "seconds_wall": round(time.time() - t0, 1),
               "objective": "mean frame_score on probe frames (holdout never used to accept a step)",
               "before": before, "after": after, "shape_before": DEFAULT_SHAPE, "shape_after": params["shape"], "log": log}
     (work / "report.json").write_text(json.dumps(report, indent=1), encoding="utf-8")
@@ -113,9 +119,10 @@ def main():
     ap.add_argument("--rounds", type=int, default=8)
     ap.add_argument("--probe", type=int, default=3)
     ap.add_argument("--features", action="store_true", help="add parametric anime eyes and mouth (style defaults for colour)")
+    ap.add_argument("--landmark-face", action="store_true", help="face shape, eyes, brows, mouth placed on the measured landmarks")
     ap.add_argument("--style", default="ellipsoid", choices=["ellipsoid", "silhouette", "outline"])
     a = ap.parse_args()
-    run(a.slug, a.shot, a.rounds, a.probe, a.style, a.features)
+    run(a.slug, a.shot, a.rounds, a.probe, a.style, a.features, a.landmark_face)
 
 
 if __name__ == "__main__":

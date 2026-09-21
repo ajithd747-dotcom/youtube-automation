@@ -473,6 +473,8 @@ def main():
     (D_ / "sheets").mkdir(exist_ok=True)
     ol_path = D_ / "character_outlines.json"     # training/measure_character_outlines.py
     outlines = json.loads(ol_path.read_text(encoding="utf-8")) if ol_path.exists() else None
+    lm_path = D_ / "face_landmarks.json"     # training/measure_face_landmarks.py
+    landmarks = json.loads(lm_path.read_text(encoding="utf-8")) if lm_path.exists() else None
     la_path = D_ / "line_art.json"           # training/measure_line_art.py
     line_art = json.loads(la_path.read_text(encoding="utf-8")) if la_path.exists() else None
     sem_path = D_ / "semantic.json"          # vision pass (frame-script-standard step 3), kept apart so a rebuild never wipes it
@@ -501,6 +503,9 @@ def main():
                                                 "units": line_art["units"]}
         else:
             script["characters"]["line_art"] = NM
+        lm_keys = [k for k in (landmarks or {"shots": {}})["shots"].get(str(i), []) if isinstance(k["points"], list)]
+        script["characters"]["face_landmarks"] = ({"keyframes": lm_keys, "measured_on": f"{landmarks['model']}, score >= {landmarks['min_score']}, largest face",
+                                                   "units": landmarks["units"]} if lm_keys else NM)
         if semantic and str(i) in semantic["shots"]:
             script["semantic"] = {**semantic["shots"][str(i)], "filled_by": semantic["filled_by"]}
         ch, co = script["characters"], script["composition"]
@@ -510,6 +515,9 @@ def main():
                         if isinstance(k["polygon"], list)), None)
         if faces and isinstance(ch["frames_with_face_share"], (int, float)) and ch["frames_with_face_share"] >= 0.5:
             box, src = list(np.median(np.array(faces, float), axis=0)), "characters.face_track (median largest face)"
+        elif isinstance(seen, list) and seen and lm_keys:
+            mid = min(lm_keys, key=lambda k: abs(k["frame"] - (sh["end"] - sh["start"]) // 2))
+            box, src = mid["bbox_xywh"], "characters.face_landmarks (anime-face-detector box; the cascade found no face)"
         elif isinstance(seen, list) and seen and outline:
             box, src = head_box_from_outline(outline, meta), "characters.silhouette_outline (head box derived from the measured outline; face detector found none)"
         elif isinstance(seen, list) and not seen:
