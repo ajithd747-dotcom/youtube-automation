@@ -1,6 +1,6 @@
 # operate/ -- running the always-on services
 
-Three `systemd --user` services keep the project reachable. Their unit files are kept in the repo and copied to
+Four `systemd --user` services keep the project reachable and its long jobs running. Their unit files are kept in the repo and copied to
 `~/.config/systemd/user/` (the one place systemd reads from).
 
 | Service | Unit file (in repo) | What it does |
@@ -8,6 +8,7 @@ Three `systemd --user` services keep the project reachable. Their unit files are
 | `youtube-dashboard` | `dashboard/remote_access/youtube-dashboard.service` | video review dashboard on `127.0.0.1:8765`, password-protected, upload page |
 | `youtube-dashboard-tunnel` | `dashboard/remote_access/youtube-dashboard-tunnel.service` | Cloudflare quick tunnel to the dashboard; the public URL **changes on every restart** |
 | `youtube-ollama` | `operate/youtube-ollama.service` | local LLM server on `127.0.0.1:11434`; models live in `tools/ollama/models` |
+| `youtube-recreation-queue` | `operate/youtube-recreation-queue.service` | runs `operate/recreation_queue.txt` (long `recreate_video.py` jobs) in order, resuming after a reboot |
 
 ```bash
 cp dashboard/remote_access/*.service operate/*.service ~/.config/systemd/user/ && systemctl --user daemon-reload
@@ -29,7 +30,20 @@ land in `reference vedios/`, then appear in the **Reference** group. Restarting 
 
 ## After a reboot
 
-`enable` makes all three start on boot only if user lingering is on: `loginctl enable-linger $USER`.
+`enable` makes all four start on boot only if user lingering is on: `loginctl enable-linger $USER` (it is).
+
+## Recreation queue
+
+Long Blender jobs do not run from a shell with `nohup` -- a reboot kills those and nothing brings them back. Add a line to
+`operate/recreation_queue.txt` (`<log name> <recreate_video.py arguments>`) and restart the service. Each job logs to
+`training/runs/<log name>.log`; a finished job leaves `training/runs/queue_done/<log name>` and is skipped from then on
+(delete the marker to re-run it). A failed job is retried up to 3 times in 6 h, then the service stops.
+
+```bash
+systemctl --user enable "$PWD/operate/youtube-recreation-queue.service"   # linked, not copied: the repo file is the unit
+systemctl --user restart youtube-recreation-queue                         # after editing the queue
+journalctl --user -u youtube-recreation-queue -f                          # start / done / FAILED per job
+```
 
 ## Toolchain
 

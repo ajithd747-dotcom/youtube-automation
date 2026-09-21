@@ -1,0 +1,5 @@
+# Long recreation jobs, run in order by operate/run_recreation_queue.sh (systemd: youtube-recreation-queue).
+# One job per line: <log name> <arguments to training/recreate_video.py>. A job is skipped once it has finished
+# (marker in training/runs/queue_done/). Add a line to queue a new job; it runs after the ones above it.
+video_bluebox blue-box --rounds 6
+video_fragrant_v2 fragrant --rounds 6 --out video_v2

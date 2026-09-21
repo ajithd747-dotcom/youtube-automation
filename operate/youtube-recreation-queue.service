@@ -1,0 +1,17 @@
+[Unit]
+# Long Blender recreation jobs (operate/recreation_queue.txt), resumed after every reboot. Renders use all 12 cores,
+# so the job runs at low priority to keep the dashboard and Ollama responsive.
+Description=youtube-automation recreation queue (resumes after reboot)
+After=network.target
+StartLimitIntervalSec=6h
+StartLimitBurst=3
+
+[Service]
+Type=simple
+ExecStart=%h/youtube-automation/operate/run_recreation_queue.sh
+Nice=10
+Restart=on-failure
+RestartSec=120
+
+[Install]
+WantedBy=default.target
