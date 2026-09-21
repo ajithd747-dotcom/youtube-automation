@@ -98,9 +98,24 @@ def interpolate_points(keys, frame):
     return keys[-1]["points"]
 
 
+HAIR_REACH_FACE_WIDTHS = 1.3     # hair extends at most this many face widths either side of the face centre
+HAIR_REACH_FACE_HEIGHTS = 1.5    # ... and at most this many face heights (brows -> chin) above the brows
+
+
 def hair_region(outline, P):
-    """Hair as seen: the measured character outline above the chin (landmark 2). The face is drawn in front of it."""
-    return clip_half_plane([tuple(p) for p in outline], 0.0, -1.0, -P[2][1])
+    """Hair as seen: the measured character outline above the chin (landmark 2), limited to the head's neighbourhood -- the
+    segmentation sometimes merges dark background shapes into the character (FF 27: hanging cloth, outline spanning 87% of
+    the frame width), and hair does not reach that far. The face is drawn in front of it."""
+    fx = (P[0][0] + P[4][0]) / 2
+    fw = max(abs(P[4][0] - P[0][0]), 1e-3)
+    brow_y = min(p[1] for p in P[5:11])
+    fh = max(P[2][1] - brow_y, 1e-3)
+    r = clip_half_plane([tuple(p) for p in outline], 0.0, -1.0, -P[2][1])
+    for nx, ny, c in ((1.0, 0.0, fx - HAIR_REACH_FACE_WIDTHS * fw), (-1.0, 0.0, -(fx + HAIR_REACH_FACE_WIDTHS * fw)),
+                      (0.0, 1.0, brow_y - HAIR_REACH_FACE_HEIGHTS * fh)):
+        if len(r) >= 3:
+            r = clip_half_plane(r, nx, ny, c)
+    return r
 
 
 def point_in_polygon(x, y, poly):

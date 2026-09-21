@@ -7,7 +7,8 @@ The one free parameter, the number of locks, is chosen by the script's measured 
 measured with measure_line_art (same function as the reference) and the lock count whose 8x8 edge-density grid is closest
 to characters.line_art.edge_density_grid wins. frame_score and grad_ssim_holdout are computed afterwards and never used to
 choose. Before = the same scene (landmark face, default proxy shape, lights from level4_shotNN) with the hair ellipsoid.
-Writes training/runs/<slug>/level7_shotNN_hair/{before,after}/ and report.json.
+--flat-proxy also draws the body unlit in its measured colour (the combination the LPIPS re-scoring favoured).
+Writes training/runs/<slug>/level7_shotNN_hair[_flat]/{before,after}/ and report.json.
 """
 import argparse
 import json
@@ -24,7 +25,7 @@ from tune_character_shape import DEFAULT_SHAPE  # noqa: E402
 from tune_line_art import probe_errors  # noqa: E402
 
 
-def run(slug, shot, locks=(4, 6, 8, 10, 12, 14, 16), n_probe=3):
+def run(slug, shot, locks=(4, 6, 8, 10, 12, 14, 16), n_probe=3, flat_proxy=False):
     D = L3.find_reference(slug)
     rect = json.loads((D / "meta.json").read_text(encoding="utf-8"))["content_rect_640"]
     W, H = rect[2] - rect[0], rect[3] - rect[1]
@@ -38,8 +39,8 @@ def run(slug, shot, locks=(4, 6, 8, 10, 12, 14, 16), n_probe=3):
         sys.exit("no measured hair_tones (re-run training/measure_face_landmarks.py, then write_shot_scripts.py)")
     params = {**json.loads((HERE / "runs" / D.name / f"level4_shot{shot:02d}" / "report.json").read_text(encoding="utf-8"))["params_tuned"],
               "shape": dict(DEFAULT_SHAPE)}
-    hair = {**spec, "hair_masses": True}
-    tag = f"level7_shot{shot:02d}_hair"
+    hair = {**spec, "hair_masses": True, "flat_proxy": flat_proxy}
+    tag = f"level7_shot{shot:02d}_hair" + ("_flat" if flat_proxy else "")
     work = HERE / "runs" / D.name / tag
     probe = sorted({int(v) for v in np.linspace(0, spec["frames"] - 1, n_probe)})
     t0 = time.time()
@@ -59,7 +60,7 @@ def run(slug, shot, locks=(4, 6, 8, 10, 12, 14, 16), n_probe=3):
     (work / "report.json").write_text(json.dumps(report, indent=1), encoding="utf-8")
     for k, v in (("before", before), ("after", after)):
         print(f"  {k:6s} full shot: frame_score={v['frame_score']:.4f} ssim={v['ssim']:.3f} hist={v['hist']:.3f} edge_f1={v['edge_f1']:.3f} "
-              f"holdout={v['grad_ssim_holdout']:.3f}", flush=True)
+              f"holdout={v['grad_ssim_holdout']:.3f} lpips={v['lpips_holdout']:.3f}", flush=True)
     return report
 
 
@@ -69,8 +70,9 @@ def main():
     ap.add_argument("shot", type=int)
     ap.add_argument("--locks", default="4,6,8,10,12,14,16")
     ap.add_argument("--probe", type=int, default=3)
+    ap.add_argument("--flat-proxy", action="store_true", help="body (and any remaining ellipsoid) unlit in its measured colour")
     a = ap.parse_args()
-    run(a.slug, a.shot, tuple(int(x) for x in a.locks.split(",")), a.probe)
+    run(a.slug, a.shot, tuple(int(x) for x in a.locks.split(",")), a.probe, a.flat_proxy)
 
 
 if __name__ == "__main__":

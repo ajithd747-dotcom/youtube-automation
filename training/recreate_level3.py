@@ -241,7 +241,7 @@ def render_and_score(D, spec, params, lo, run_name, rect):
     tgt_curve = np.interp(frames, sorted(exp_keys), [exp_keys[k] for k in sorted(exp_keys)])
     got_curve = np.array([lights[f]["luma_mean"] for f in frames])
     return {"frame_score": scores["frame_score"], "ssim": scores["ssim"], "hist": scores["hist"], "edge_f1": scores["edge_f1"],
-            "grad_ssim_holdout": scores["grad_ssim_holdout"], "dhue": scores["dhue"],
+            "grad_ssim_holdout": scores["grad_ssim_holdout"], "lpips_holdout": scores.get("lpips_holdout"), "dhue": scores["dhue"],
             "feature_error": round(err, 4), "feature_errors": {k: round(v, 3) for k, v in per.items()},
             "exposure_curve_mae": round(float(np.abs(got_curve - tgt_curve).mean()), 4)}
 

@@ -32,7 +32,22 @@ def expand(spec, n):
     return out
 
 
-def run(slug, rounds=6, shots_spec="", out_name="video"):
+MEASURED_HAIR_LOCKS = 10        # lock count for hair masses in whole-video runs (tune_hair_masses.py chose 8-16 on FF 27/50/32)
+
+
+def apply_character_look(spec, look):
+    """look "proxy": rung 3/4 ellipsoids (the default). look "measured": every part drawn from measurements where the script
+    has them -- face on the landmarks (face_from_landmarks), hair as the measured outline in the measured hair tones
+    (hair_masses), body unlit in its measured colour (flat_proxy). Parts without the measurement fall back to the proxy."""
+    if look != "measured" or not spec["character"]:
+        return spec
+    keys = spec.get("landmark_keys") or []
+    has_hair = any(isinstance((k.get("hair_tones") or {}).get("dark_share"), (int, float)) for k in keys)
+    return {**spec, "face_from_landmarks": bool(spec.get("landmarks")), "hair_masses": bool(spec.get("outline") and spec.get("landmarks") and has_hair),
+            "flat_proxy": True}
+
+
+def run(slug, rounds=6, shots_spec="", out_name="video", look="proxy"):
     D = L3.find_reference(slug)
     meta = json.loads((D / "meta.json").read_text(encoding="utf-8"))
     rect = meta["content_rect_640"]
@@ -49,15 +64,16 @@ def run(slug, rounds=6, shots_spec="", out_name="video"):
             continue
         t0 = time.time()
         script = json.loads((D / "shots" / f"shot_{i:02d}.json").read_text(encoding="utf-8"))
-        spec = L3.build_scene_spec(script)
+        spec = apply_character_look(L3.build_scene_spec(script), look)
         work = out / "work" / f"shot_{i:02d}"
         tlog = []
-        params = L3.tune(spec, L3.initial_params(script), rounds, work, tlog)
+        params = L3.tune(spec, {**L3.initial_params(script), "hair_locks": MEASURED_HAIR_LOCKS}, rounds, work, tlog)
         paths = L3.render(spec, [params], list(range(spec["frames"])), W, H, work / "final")
         for f in range(spec["frames"]):
             shutil.move(str(paths[(0, f)]), frames_dir / f"f_{sh['start'] + f + 1:05d}.png")
         shutil.rmtree(work, ignore_errors=True)
-        done[str(i)] = {"frames": [sh["start"], sh["end"]], "character_proxy": spec["character"] is not None,
+        done[str(i)] = {"frames": [sh["start"], sh["end"]], "character_proxy": spec["character"] is not None, "look": look,
+                        "measured_parts": [k for k in ("face_from_landmarks", "hair_masses", "flat_proxy") if spec.get(k)],
                         "feature_error": tlog[-1]["error"], "seconds": round(time.time() - t0, 1), "params": params}
         log_path.write_text(json.dumps(done, indent=1), encoding="utf-8")
         print(f"shot {i} ({spec['frames']}f) character={spec['character'] is not None} feature_error {tlog[0]['error']:.2f} -> {tlog[-1]['error']:.2f} "
@@ -88,8 +104,9 @@ def main():
     ap.add_argument("--rounds", type=int, default=6)
     ap.add_argument("--shots", default="")
     ap.add_argument("--out", default="video", help="run folder name under training/runs/<slug>/")
+    ap.add_argument("--look", default="proxy", choices=["proxy", "measured"], help="character drawing: rung 3/4 proxies, or measured parts")
     a = ap.parse_args()
-    run(a.slug, a.rounds, a.shots, a.out)
+    run(a.slug, a.rounds, a.shots, a.out, a.look)
 
 
 if __name__ == "__main__":

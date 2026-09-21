@@ -457,3 +457,22 @@ the gradient holdout preferred. The renders agree with LPIPS: hair masses LOOK l
 The two holdouts now disagree often, so neither decides alone: a change is a clear win when frame_score and lpips_holdout
 rise and grad_ssim_holdout does not fall by more than calibration noise; when they split, look at the frames. Next:
 combine the pieces LPIPS favours (landmark face + hair masses + flat proxies) and test on 27/50/32, then on whole videos.
+
+## 2026-09-21 -- combined measured character (landmark face + hair masses + flat body) on FF 27 / 50 / 32
+
+`tune_hair_masses.py --flat-proxy` (lights from level4, default proxy shape; before = landmark face with lit ellipsoid
+hair/body). recreate_level3.render_and_score now also returns lpips_holdout.
+
+| shot | before: frame_score / grad holdout / lpips | combined | locks |
+|---|---|---|---|
+| FF 27 | 0.579 / 0.508 / 0.586 | 0.490 / 0.477 / 0.585 | 10 |
+| FF 50 | 0.481 / 0.395 / 0.453 | **0.515** / 0.361 / **0.518** | 8 |
+| FF 32 | 0.587 / 0.569 / 0.459 | **0.652** / 0.536 / **0.514** | 16 |
+
+50 and 32: clear wins on frame_score and lpips (+0.065, +0.055); the gradient holdout falls its usual ~0.03. 27 fails on
+frame_score (hist 0.69 -> 0.50) with lpips flat, and the cause is the measurement: anime-seg merged the hanging cloth and
+the lavender brick wall into 27's "character" (outline spans x 0.05-0.92), so the hair region is a tent and its measured
+light tone [86,83,103] is the wall. `face_geometry.hair_region` now limits hair to 1.3 face widths either side of the face
+centre and 1.5 face heights above the brows -- too loose to fix 27 (unchanged at 0.490), kept as a guard; no per-shot
+fitting. Verdict left to the whole trailer: recreate_video.py --look measured (face / hair / body from measurements
+where the script has them, lights tuned with those parts in place, 10 locks).
