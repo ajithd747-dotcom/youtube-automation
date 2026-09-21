@@ -38,6 +38,10 @@ def degrade(kind, im, ctx):
         return np.clip(im.astype(np.float32) * 1.25, 0, 255).astype(np.uint8)
     if kind == "mirrored":
         return im[:, ::-1]
+    if kind == "offset_4px":                              # the right drawing, placed 4 px off (right and down)
+        return cv2.warpAffine(im, np.float32([[1, 0, 4], [0, 1, 4]]), (im.shape[1], im.shape[0]), borderMode=cv2.BORDER_REPLICATE)
+    if kind == "simplified_meanshift":                    # a faithful but simplified redraw: flat regions, detail gone, edges kept
+        return cv2.pyrMeanShiftFiltering(im, 8, 30)
     if kind == "shifted_3_frames":
         return ctx["shifted"]
     if kind == "flat_shot_mean_colour":
@@ -49,7 +53,8 @@ def degrade(kind, im, ctx):
     raise KeyError(kind)
 
 
-KINDS = ["identical", "jpeg_q15", "blur_sigma2", "posterise_8_levels", "brightness_plus_25pct", "blur_sigma10", "blur_sigma25", "mirrored",
+KINDS = ["identical", "jpeg_q15", "blur_sigma2", "posterise_8_levels", "simplified_meanshift", "offset_4px", "brightness_plus_25pct", "blur_sigma10",
+         "blur_sigma25", "mirrored",
          "shifted_3_frames", "flat_frame_mean_colour", "flat_shot_mean_colour", "another_video_same_index"]
 
 
@@ -88,17 +93,19 @@ def main():
         other = cv2.resize(SR.crop_to_content(cv2.imread(str(O / "frames" / f"f_{(int(i) % onframes) + 1:05d}.jpg")), orect), (ref.shape[1], ref.shape[0]))
         ctx = {"shifted": SR.load_reference_frame(D, int(i) + 3, rect), "shot_mean": shot_col, "other": other}
         for kind in KINDS:
-            sc, _ = SR.score_frame_pair(ref, degrade(kind, ref, ctx), mask)
+            deg = degrade(kind, ref, ctx)
+            sc, _ = SR.score_frame_pair(ref, deg, mask)
+            sc["lpips_holdout"] = SR.lpips_similarity(ref, deg, mask)
             results[kind].append(sc)
 
     table = {}
     print(f"{D.name}: {len(idx)} sample frames, other video for the unrelated rung: {O.name}\n")
-    print(f"{'degradation':28s} {'frame_score':>11s} {'ssim':>7s} {'hist':>7s} {'edge_f1':>8s} {'holdout':>8s} {'dhue':>7s}")
+    print(f"{'degradation':28s} {'frame_score':>11s} {'ssim':>7s} {'hist':>7s} {'edge_f1':>8s} {'holdout':>8s} {'lpips':>7s} {'dhue':>7s}")
     for kind in KINDS:
         v = results[kind]
-        table[kind] = {k: round(float(np.mean([x[k] for x in v])), 4) for k in ("frame_score", "ssim", "hist", "edge_f1", "grad_ssim_holdout", "dhue")}
+        table[kind] = {k: round(float(np.mean([x[k] for x in v])), 4) for k in ("frame_score", "ssim", "hist", "edge_f1", "grad_ssim_holdout", "lpips_holdout", "dhue")}
         t = table[kind]
-        print(f"{kind:28s} {t['frame_score']:11.4f} {t['ssim']:7.3f} {t['hist']:7.3f} {t['edge_f1']:8.3f} {t['grad_ssim_holdout']:8.3f} {t['dhue']:7.2f}")
+        print(f"{kind:28s} {t['frame_score']:11.4f} {t['ssim']:7.3f} {t['hist']:7.3f} {t['edge_f1']:8.3f} {t['grad_ssim_holdout']:8.3f} {t['lpips_holdout']:7.3f} {t['dhue']:7.2f}")
     (D / "calibration.json").write_text(json.dumps({"n_frames": int(len(idx)), "weights": SR.WEIGHTS, "table": table}, indent=1), encoding="utf-8")
     problems = []
     if table["identical"]["frame_score"] < 0.999:

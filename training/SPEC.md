@@ -18,6 +18,7 @@ Per frame, recreation vs reference, both at analysis size (640 px wide):
 | `hist` | colour-histogram intersection (1 = same colour mix) | `training/score_recreation.py` |
 | `edge_f1` | agreement of edge maps = line work / silhouettes (1 = same) | `training/score_recreation.py` |
 | `grad_ssim_holdout` | SSIM of Sobel gradient-magnitude images. **Reported, never tuned against**: a recreation that traces Canny edges to please `edge_f1` cannot fake it | `training/score_recreation.py` |
+| `lpips_holdout` | 1 - LPIPS(alex) distance: learned perceptual similarity. **Reported, never tuned against.** Tolerates small offsets and simplified redraws (calibration: 4 px offset 0.925, mean-shift redraw 0.893) but not blur, flat colour or another video (0.54 / 0.45 / 0.31). The second opinion where `grad_ssim_holdout` punishes a drawing that is right but a few pixels off as hard as blur sigma 25 | `training/score_recreation.py` |
 | `frame_score` | `0.4*ssim + 0.25*hist + 0.25*edge_f1 + 0.10*(1 - min(dhue/20, 1))` | `training/score_recreation.py` |
 
 A number means nothing alone, so **calibration comes first**: `training/calibrate_scores.py` scores known

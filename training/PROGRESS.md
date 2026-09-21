@@ -420,3 +420,40 @@ content change that raised the holdout on more than one shot is the landmark fac
 Anything placed plausibly but not measured (templates, wedges, strokes, tuned ellipsoids) lowers it, by 0.01-0.05, even
 when it looks closer to the reference. grad_ssim_holdout is an unforgiving judge: SSIM on gradient maps blurred at sigma
 1.2 px, so an edge a few pixels off counts as a missing edge AND a false one. Off by default.
+
+## 2026-09-21 -- a second holdout: LPIPS (perceptual) -- and it reverses most of rungs 4-7's verdicts
+
+Added `lpips_holdout` = 1 - LPIPS(alex) to score_recreation.py (reported, never tuned against; subtitles/logos masked by
+copying reference pixels; <= 300 sampled frames per run, ~0.15 s/frame on CPU; weights in tools/torch). Calibration on
+Fragrant (60 frames, calibrate_scores.py, two new degradations):
+
+| degradation | frame_score | grad_ssim_holdout | lpips_holdout |
+|---|---|---|---|
+| identical | 1.000 | 1.000 | 1.000 |
+| offset 4 px (right drawing, misplaced) | 0.780 | **0.568** | **0.925** |
+| mean-shift simplified redraw | 0.928 | 0.830 | 0.893 |
+| blur sigma 2 / 10 / 25 | 0.819 / 0.628 / 0.589 | 0.846 / 0.589 / 0.556 | 0.791 / 0.581 / 0.540 |
+| flat shot colour | 0.392 | 0.441 | 0.444 |
+| another video | 0.245 | 0.320 | 0.308 |
+
+Ordering check passes. grad_ssim_holdout scores a correct drawing 4 px off as low as blur sigma 25; LPIPS scores it near
+identical while keeping blur, flat colour and unrelated frames low. So the gradient holdout could not tell "roughly right
+shapes" from "mush" -- exactly the regime rungs 4-7 operate in.
+
+Every earlier run re-scored without re-rendering (training/rescore_perceptual.py), same scene before vs after each change:
+
+| change | FF 27 lpips | FF 50 lpips | FF 32 lpips | grad holdout said |
+|---|---|---|---|---|
+| no character -> rung 4 ellipsoid proxy | 0.523 -> 0.561 | 0.377 -> 0.411 | 0.406 -> 0.397 | worse on all |
+| rung 5 shape tuning (frame_score) | 0.561 -> 0.565 | 0.411 -> 0.417 | 0.397 -> 0.373 | mixed |
+| landmark face (vs rung 5) | 0.565 -> 0.578 | 0.417 -> 0.448 | 0.373 -> 0.459 | +, +, n/a |
+| line-art strokes (rung 6) | 0.565 -> 0.575 | 0.417 -> 0.468 | -- | worse on both |
+| flat measured-colour proxies | 0.586 -> 0.586 | 0.453 -> 0.464 | 0.459 -> 0.536 | 2 of 3 worse |
+| hair masses (rung 7) | 0.586 -> 0.590 | 0.453 -> **0.518** | 0.459 -> 0.514 | worse on all |
+
+By LPIPS: the landmark face, hair masses and flat proxies each help on every shot (or hold), the character proxy helps
+where the character is large, and the best S32 is the flat-proxy landmark face (0.536) -- not "no character" (0.406), which
+the gradient holdout preferred. The renders agree with LPIPS: hair masses LOOK like each character's hair.
+The two holdouts now disagree often, so neither decides alone: a change is a clear win when frame_score and lpips_holdout
+rise and grad_ssim_holdout does not fall by more than calibration noise; when they split, look at the frames. Next:
+combine the pieces LPIPS favours (landmark face + hair masses + flat proxies) and test on 27/50/32, then on whole videos.

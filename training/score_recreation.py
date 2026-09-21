@@ -7,6 +7,9 @@ Compares reference frame (start + i) with recreation frame i, at reference analy
 recreation frames score 0: a recreation that renders half the shot does not get credit for the half it skipped.
 
 Metrics per frame (see training/SPEC.md section 1): ssim, hist, edge_f1, dhue -> frame_score.
+Two holdouts, reported and never tuned against: grad_ssim_holdout (structure of gradient maps, pixel-exact) and
+lpips_holdout = 1 - LPIPS(alex) distance (learned perceptual similarity; tolerant of small offsets and style), the latter on
+at most LPIPS_MAX_FRAMES evenly spaced frames per run.
 Writes training/runs/<slug>/<run>/scores.json and worst_frames.jpg.
 """
 import argparse
@@ -22,6 +25,7 @@ import numpy as np
 from skimage.metrics import structural_similarity
 
 HERE = Path(__file__).resolve().parent
+os.environ.setdefault("TORCH_HOME", str(HERE.parent / "tools" / "torch"))     # AlexNet weights stay inside the project
 REF = HERE / "reference"
 RUNS = HERE / "runs"
 WEIGHTS = {"ssim": 0.40, "hist": 0.25, "edge_f1": 0.25, "colour": 0.10}
@@ -81,6 +85,24 @@ def score_frame_pair(ref, rec, mask=None):
     score = WEIGHTS["ssim"] * max(ssim, 0.0) + WEIGHTS["hist"] * hist + WEIGHTS["edge_f1"] * f1 + WEIGHTS["colour"] * colour
     return {"ssim": round(ssim, 4), "hist": round(hist, 4), "edge_f1": round(f1, 4), "dhue": round(dhue, 3), "frame_score": round(score, 4),
             "grad_ssim_holdout": round(grad_ssim, 4)}, 1.0 - smap
+
+
+LPIPS_MAX_FRAMES = 300
+_LPIPS = {}
+
+
+def lpips_similarity(ref, rec, mask=None):
+    """1 - LPIPS(alex) distance between two BGR uint8 frames of the same size; pixels outside `mask` (subtitles, logos) are
+    copied from the reference into the recreation first, so they cannot count either way."""
+    import torch
+    if "net" not in _LPIPS:
+        import lpips
+        _LPIPS["net"] = lpips.LPIPS(net="alex", verbose=False).eval()
+    if mask is not None:
+        rec = np.where(mask[:, :, None], rec, ref)
+    t = lambda im: torch.from_numpy(cv2.cvtColor(im, cv2.COLOR_BGR2RGB)).permute(2, 0, 1)[None].float() / 127.5 - 1.0
+    with torch.no_grad():
+        return 1.0 - float(_LPIPS["net"](t(ref), t(rec)))
 
 
 def crop_to_content(img, rect):
@@ -154,14 +176,27 @@ def main():
     with mp.Pool(os.cpu_count() or 4) as pool:
         frames = [row for part in pool.map(score_chunk, chunks, chunksize=1) for row in part]
     frames.sort(key=lambda r: r["frame"])
+    step = max(1, -(-len(frames) // LPIPS_MAX_FRAMES))
+    for r in frames[::step]:
+        if r.get("missing"):
+            r["lpips_holdout"] = 0.0
+            continue
+        ref = load_reference_frame(D, r["frame"], rect)
+        rec = cv2.imread(str(rec_paths[r["frame"] - a.start]))
+        if rec.shape[:2] != ref.shape[:2]:
+            rec = cv2.resize(rec, (ref.shape[1], ref.shape[0]), interpolation=cv2.INTER_AREA)
+        r["lpips_holdout"] = round(lpips_similarity(ref, rec, build_mask(ref.shape[0], ref.shape[1], sub_flags[r["frame"]], not a.no_corner_mask)), 4)
 
     per_shot = {}
     for r in frames:
         per_shot.setdefault(shot_of[r["frame"]], []).append(r)
     shots = {str(k): {"frames": len(v), "frame_score": round(float(np.mean([x["frame_score"] for x in v])), 4),
                       "ssim": round(float(np.mean([x["ssim"] for x in v])), 4), "hist": round(float(np.mean([x["hist"] for x in v])), 4),
-                      "edge_f1": round(float(np.mean([x["edge_f1"] for x in v])), 4)} for k, v in sorted(per_shot.items())}
+                      "edge_f1": round(float(np.mean([x["edge_f1"] for x in v])), 4),
+                      "lpips_holdout": round(float(np.mean([x["lpips_holdout"] for x in v if "lpips_holdout" in x])), 4) if any("lpips_holdout" in x for x in v) else None}
+             for k, v in sorted(per_shot.items())}
     overall = {k: round(float(np.mean([x.get(k, 0.0) for x in frames])), 4) for k in ("frame_score", "ssim", "hist", "edge_f1", "grad_ssim_holdout")}
+    overall["lpips_holdout"] = round(float(np.mean([x["lpips_holdout"] for x in frames if "lpips_holdout" in x])), 4)
     overall["dhue"] = round(float(np.mean([x["dhue"] for x in frames if x["dhue"] is not None])), 3) if any(x["dhue"] is not None for x in frames) else None
     coverage = round(sum(1 for x in frames if not x.get("missing")) / max(len(frames), 1), 4)
     worst = sorted(frames, key=lambda r: r["frame_score"])[:8]
