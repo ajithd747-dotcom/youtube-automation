@@ -180,3 +180,16 @@ Timing, exposure and colour of the whole trailer are recreated; content is not (
 close-ups where the face detector found nothing get no character; on non-character shots the saliency "subject" becomes a
 stray ellipse (sometimes on a subtitle). Next: drop the saliency blob when the semantic pass lists no character, and use the
 anime-seg outline to place characters the face detector misses.
+
+## 2026-09-21 -- parametric anime face features (eyes, lash line, mouth)
+
+`tune_character_shape.py --features`: eyes (white, iris, shine, lash line) and a mouth line placed from the face box, sizes
+tuned with the shape; colours are style defaults (the grid cannot resolve eyes).
+
+| shot | shape only: frame_score / holdout | + face features |
+|---|---|---|
+| FF 27 | 0.560 / 0.513 | 0.585 / 0.507 |
+| FF 50 | 0.444 / 0.394 | 0.462 / 0.394 |
+
++0.02 frame_score, holdout flat -- the gain is edge_f1 (0.26 -> 0.38 on 27). Not enough to call a skill: the holdout, which is
+not tuned, does not confirm it. Kept as an option, off by default.
