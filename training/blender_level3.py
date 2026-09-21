@@ -81,42 +81,54 @@ def diffuse_material(name, colour_lin=None, ramp=None):
     return mat, bsdf, cr
 
 
-def screen_ellipsoid(name, cx, cy, sw, sh, dist, aspect, rgb, depth_ratio=0.6, box=False):
-    """Ellipsoid (or bevelled box) whose silhouette covers the screen box centred (cx, cy) of size (sw, sh) in frame fractions,
-    at `dist` from the camera."""
-    vw, vh = view_size_at(dist, aspect)
-    loc = ((cx - 0.5) * vw, dist - CAM_DIST, (0.5 - cy) * vh)          # camera sits at y = -CAM_DIST looking +Y
-    if box:
-        bpy.ops.mesh.primitive_cube_add(size=1.0, location=loc)
-    else:
-        bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, radius=0.5, location=loc)
+DEFAULT_SHAPE = {   # character proxy, in units of the face box (x, y, w, h); tuned per shot by training/tune_character_shape.py
+    "hair_w": 1.15, "hair_h": 1.05, "hair_cy": 0.35,
+    "head_w": 0.75, "head_h": 0.8, "head_cy": 0.6,
+    "body_w": 2.0, "body_top": 0.95,
+}
+
+
+def make_ellipsoid(name, rgb):
+    bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, radius=0.5)
     o = bpy.context.active_object
     o.name = name
-    o.scale = (sw * vw, min(sw * vw, sh * vh) * depth_ratio, sh * vh)
-    if box:
-        bev = o.modifiers.new("round", "BEVEL")
-        bev.width, bev.segments = 0.25 * min(sw * vw, sh * vh), 6
     bpy.ops.object.shade_smooth()
     mat, _, _ = diffuse_material(name, colour_lin=rgb_lin(rgb))
     o.data.materials.append(mat)
     return o
 
 
-def build_character(face_xywh, ch, aspect):
-    """Character proxy from the semantic pass + measured colours: body (behind), hair (behind the head), head (front).
-    Anime face boxes span brows to chin; hair extends above, the body starts below the chin."""
+def place_on_screen(o, cx, cy, sw, sh, dist, aspect, depth_ratio=0.6):
+    """Put ellipsoid o so its silhouette covers the screen box centred (cx, cy), size (sw, sh) in frame fractions, `dist` from the camera."""
+    vw, vh = view_size_at(dist, aspect)
+    o.location = ((cx - 0.5) * vw, dist - CAM_DIST, (0.5 - cy) * vh)          # camera sits at y = -CAM_DIST looking +Y
+    o.scale = (max(sw, 1e-3) * vw, max(min(sw * vw, sh * vh), 1e-3) * depth_ratio, max(sh, 1e-3) * vh)
+
+
+def screen_ellipsoid(name, cx, cy, sw, sh, dist, aspect, rgb, depth_ratio=0.6):
+    o = make_ellipsoid(name, rgb)
+    place_on_screen(o, cx, cy, sw, sh, dist, aspect, depth_ratio)
+    return o
+
+
+def build_character(ch):
+    """Character proxy from the semantic pass + measured colours: body (behind), hair (behind the head), head (front)."""
+    return {k: make_ellipsoid(k, ch[f"{k if k != 'head' else 'skin'}_rgb"]) for k in ("body", "hair", "head")
+            if isinstance(ch.get(f"{k if k != 'head' else 'skin'}_rgb"), list)}
+
+
+def place_character(parts, face_xywh, shape, aspect):
+    """Anime face boxes span brows to chin: hair extends above, the body starts below the chin."""
     x, y, w, h = face_xywh
-    cx = x + w / 2
-    d_head = CAM_DIST - SUBJECT_DEPTH
-    parts = []
-    if isinstance(ch.get("body_rgb"), list):
-        top = y + 0.95 * h
-        parts.append(screen_ellipsoid("body", cx, (top + 1.3) / 2, 2.0 * w, 1.3 - top, d_head + 0.8, aspect, ch["body_rgb"], 0.5, box=True))
-    if isinstance(ch.get("hair_rgb"), list):
-        parts.append(screen_ellipsoid("hair", cx, y + 0.35 * h, 1.15 * w, 1.05 * h, d_head + 0.4, aspect, ch["hair_rgb"], 0.7))
-    if isinstance(ch.get("skin_rgb"), list):
-        parts.append(screen_ellipsoid("head", cx, y + 0.6 * h, 0.75 * w, 0.8 * h, d_head, aspect, ch["skin_rgb"], 0.7))
-    return parts
+    s = {**DEFAULT_SHAPE, **(shape or {})}
+    cx, d_head = x + w / 2, CAM_DIST - SUBJECT_DEPTH
+    if "body" in parts:
+        top = y + s["body_top"] * h
+        place_on_screen(parts["body"], cx, (top + 1.3) / 2, s["body_w"] * w, 1.3 - top, d_head + 0.8, aspect, 0.5)
+    if "hair" in parts:
+        place_on_screen(parts["hair"], cx, y + s["hair_cy"] * h, s["hair_w"] * w, s["hair_h"] * h, d_head + 0.4, aspect, 0.7)
+    if "head" in parts:
+        place_on_screen(parts["head"], cx, y + s["head_cy"] * h, s["head_w"] * w, s["head_h"] * h, d_head, aspect, 0.7)
 
 
 def build_scene(sc, spec, width, height):
@@ -145,7 +157,7 @@ def build_scene(sc, spec, width, height):
     subject = None
     ch = spec.get("character")
     if ch and spec.get("subject_bbox_xywh"):
-        subject = build_character(spec["subject_bbox_xywh"], ch, aspect)
+        subject = build_character(ch)
     elif spec.get("subject_bbox_xywh") and spec.get("subject_rgb"):
         x, y, w, h = spec["subject_bbox_xywh"]
         subject = screen_ellipsoid("subject", x + w / 2, y + h / 2, w, h, CAM_DIST - SUBJECT_DEPTH, aspect, spec["subject_rgb"], depth_ratio=0.6)
@@ -181,7 +193,7 @@ def build_scene(sc, spec, width, height):
     nt.links.new(glare.outputs["Image"], mix.inputs[1])
     nt.links.new(blur.outputs["Image"], mix.inputs[2])
     nt.links.new(mix.outputs["Image"], comp.inputs["Image"])
-    return {"cam": cam, "sun": sun, "bg": bg, "glare": glare, "vignette": mix, "subject": subject, "back_bsdf": back_bsdf}
+    return {"aspect": aspect, "character": subject if isinstance(subject, dict) else None, "cam": cam, "sun": sun, "bg": bg, "glare": glare, "vignette": mix, "subject": subject, "back_bsdf": back_bsdf}
 
 
 KEY_RADIUS = 9.0                # key light distance from the backdrop centre
@@ -204,6 +216,8 @@ def apply_candidate(sc, obj, spec, p):
     obj["glare"].inputs["Strength"].default_value = p["bloom_strength"]
     obj["glare"].inputs["Threshold"].default_value = 0.8
     obj["vignette"].inputs["Fac"].default_value = p["vignette"]
+    if obj["character"]:
+        place_character(obj["character"], spec["subject_bbox_xywh"], p.get("shape"), obj["aspect"])
 
 
 def key_animation(sc, obj, spec, p):

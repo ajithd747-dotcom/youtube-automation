@@ -94,3 +94,17 @@ around the face box (new script field `colour.regions.character`). Same tuning l
 What it taught: right colours in roughly the right places lift frame_score (hist, ssim), but the holdout FALLS on both shots --
 ellipsoid outlines sit where the real ones are not. Frame_score alone would have called this a win. Next: silhouette
 shape (hair outline, shoulders) and the face detector's misses (use semantic characters when detection is empty).
+
+## 2026-09-21 -- rung 5 (character silhouette learned from feedback) -- small gain, ellipsoid ceiling
+
+training/tune_character_shape.py: rung-4 lights fixed, 8 shape parameters of the head/hair/body proxy tuned by coordinate
+descent on mean frame_score of 3 probe frames; holdout never used to accept a step.
+
+| shot | before frame_score / holdout | after frame_score / holdout | edge_f1 |
+|---|---|---|---|
+| FF 27 | 0.534 / 0.506 | 0.560 / 0.513 | 0.149 -> 0.261 |
+| FF 50 | 0.431 / 0.395 | 0.444 / 0.394 | 0.089 -> 0.116 |
+
+What it taught: the gain is almost all edge_f1 (outlines moved toward the real ones); holdout +0.007 on 27, flat on 50, so it
+is not only fitting the metric, but three ellipsoids have hit their ceiling (~+0.01-0.03). Next shape step needs a richer
+silhouette family (hair outline with spikes/bangs, shoulders), not more tuning of ellipsoids.
