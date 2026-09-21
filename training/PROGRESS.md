@@ -354,3 +354,25 @@ move with them. The bigger finding is the shape tuner itself: on 32 it grows the
 while the holdout falls 0.569 -> 0.517 -- frame_score's 0.25 hist weight rewards painting the frame the right colours in the
 wrong shapes. On a close-up that is the whole frame. The landmark face is still not confirmed: on 32 no character keeps the
 best holdout. Next: tune the proxy shape against the measured silhouette (characters.silhouette_outline IoU), not frame_score.
+
+## 2026-09-21 -- proxy shape tuned to the measured silhouette (outline IoU): silhouette fit does not move the holdout
+
+`tune_character_shape.py --objective outline`: the proxy's screen silhouette computed from the same geometry Blender uses
+(union of hair/head/body ellipses + landmark face polygon; camera motion ignored -- static on these shots), coordinate
+descent on IoU with characters.silhouette_outline over the outline keyframes, no rendering in the loop (seconds). Checked
+against a render: the silhouettes coincide; a render-difference mask adds the proxy's cast shadow and misses dark hair on
+a dark backdrop, which is why its IoU with the computed mask read only 0.44-0.75.
+
+| shot | outline IoU | frame_score / holdout, default shape | outline-tuned | frame_score-tuned (previous entry) |
+|---|---|---|---|---|
+| FF 27 | 0.612 -> 0.738 | 0.579 / 0.508 | 0.557 / 0.500 | 0.594 / 0.514 |
+| FF 50 | 0.617 -> 0.939 | 0.481 / 0.395 | 0.480 / 0.394 | 0.482 / 0.397 |
+| FF 32 | 0.645 -> 0.811 | 0.587 / 0.569 | 0.585 / 0.542 | 0.647 / 0.517 |
+
+On 50 the proxy covers 94% of the measured silhouette and the holdout does not move; on 32 a better silhouette LOWERS it.
+Together with the rung-5 finding (three shape families within ~0.01) this settles it: the outer silhouette is not what the
+holdout measures. The holdout is SSIM of gradient-magnitude maps -- it rewards gradients where the reference has them and
+flatness where it is flat. A lit ellipsoid puts smooth shading gradients across areas the reference paints flat (anime cel
+fills), and the bigger the proxy, the more of them -- which is why no character at all still scores best on 32 (0.609).
+Next candidates, both about interior gradients rather than outline: flat (unlit, measured-colour) hair and body proxies
+like the landmark face; then interior structure (hair masses, clothing folds) where the reference has edges.
