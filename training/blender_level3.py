@@ -110,7 +110,11 @@ DEFAULT_SHAPE = {   # character proxy, in units of the face box (x, y, w, h); tu
     "body_w": 2.0, "body_top": 0.95,
     # silhouette style only (spec["character_style"] == "silhouette")
     "spike": 0.12, "side_len": 0.6, "bang_len": 0.35, "neck_w": 0.35, "shoulder_drop": 0.35,
+    # face features (spec["face_features"]): eyes/brows/mouth relative to the face box
+    "eye_y": 0.55, "eye_dx": 0.2, "eye_w": 0.16, "eye_h": 0.2, "mouth_y": 0.82, "mouth_w": 0.12,
 }
+# STYLE DEFAULTS, not measurements: the 32x18 grid cannot resolve eyes. Iris = hair colour darkened; sclera/highlight white.
+EYE_WHITE, LINE_DARK = [245, 245, 245], [35, 30, 35]
 BANG_TEETH = 5
 
 
@@ -219,6 +223,40 @@ def build_character(ch, style="ellipsoid"):
     return parts
 
 
+def build_face_features(ch):
+    iris = [int(v * 0.55) for v in ch["hair_rgb"]] if isinstance(ch.get("hair_rgb"), list) else LINE_DARK
+    f = {}
+    for side in ("l", "r"):
+        f[f"white_{side}"] = make_flat(f"white_{side}", EYE_WHITE)
+        f[f"iris_{side}"] = make_flat(f"iris_{side}", iris)
+        f[f"shine_{side}"] = make_flat(f"shine_{side}", EYE_WHITE)
+        f[f"lash_{side}"] = make_flat(f"lash_{side}", LINE_DARK)
+    f["mouth"] = make_flat("mouth", LINE_DARK)
+    return f
+
+
+def ellipse_pts(cx, cy, rw, rh, n=20):
+    return [(cx + rw * math.cos(2 * math.pi * i / n), cy + rh * math.sin(2 * math.pi * i / n)) for i in range(n)]
+
+
+def place_face_features(f, face_xywh, shape, aspect):
+    """Anime eyes (white, iris, shine, upper lash line) and a mouth line, flat, just in front of the head proxy."""
+    x, y, w, h = face_xywh
+    s = {**DEFAULT_SHAPE, **(shape or {})}
+    d = CAM_DIST - SUBJECT_DEPTH - 0.9
+    cx = x + w / 2
+    for side, sgn in (("l", -1), ("r", 1)):
+        ex, ey, ew, eh = cx + sgn * s["eye_dx"] * w, y + s["eye_y"] * h, s["eye_w"] * w, s["eye_h"] * h
+        set_flat_outline(f[f"white_{side}"], ellipse_pts(ex, ey, ew / 2, eh / 2), d, aspect)
+        set_flat_outline(f[f"iris_{side}"], ellipse_pts(ex, ey + 0.05 * eh, ew * 0.36, eh * 0.42), d - 0.02, aspect)
+        set_flat_outline(f[f"shine_{side}"], ellipse_pts(ex - 0.12 * ew, ey - 0.12 * eh, ew * 0.1, eh * 0.1), d - 0.04, aspect)
+        set_flat_outline(f[f"lash_{side}"], [(ex - 0.6 * ew, ey - 0.45 * eh), (ex + 0.6 * ew, ey - 0.5 * eh), (ex + 0.6 * ew, ey - 0.36 * eh),
+                                             (ex - 0.6 * ew, ey - 0.31 * eh)], d - 0.03, aspect)
+    mw = s["mouth_w"] * w
+    my = y + s["mouth_y"] * h
+    set_flat_outline(f["mouth"], [(cx - mw / 2, my), (cx + mw / 2, my), (cx + mw / 2, my + 0.012), (cx - mw / 2, my + 0.012)], d, aspect)
+
+
 def place_character(parts, face_xywh, shape, aspect, outline=None):
     """Anime face boxes span brows to chin: hair extends above, the body starts below the chin."""
     x, y, w, h = face_xywh
@@ -282,6 +320,8 @@ def build_scene(sc, spec, width, height):
     ch = spec.get("character")
     if ch and spec.get("subject_bbox_xywh"):
         subject = build_character(ch, spec.get("character_style", "ellipsoid"))
+        if spec.get("face_features"):
+            subject["_features"] = build_face_features(ch)
     elif spec.get("subject_bbox_xywh") and spec.get("subject_rgb"):
         x, y, w, h = spec["subject_bbox_xywh"]
         subject = screen_ellipsoid("subject", x + w / 2, y + h / 2, w, h, CAM_DIST - SUBJECT_DEPTH, aspect, spec["subject_rgb"], depth_ratio=0.6)
@@ -342,6 +382,8 @@ def apply_candidate(sc, obj, spec, p):
     obj["vignette"].inputs["Fac"].default_value = p["vignette"]
     if obj["character"]:
         place_character(obj["character"], spec["subject_bbox_xywh"], p.get("shape"), obj["aspect"], spec.get("outline"))
+        if "_features" in obj["character"]:
+            place_face_features(obj["character"]["_features"], spec["subject_bbox_xywh"], p.get("shape"), obj["aspect"])
 
 
 def key_animation(sc, obj, spec, p):
