@@ -160,3 +160,23 @@ Looking at the renders: what is missing is interior detail -- line art, eyes, ha
 
 Voice skill confirmed on Blue Box: character accuracy 0.838 = the Whisper ceiling on the reference vocals (0.838); music key
 matched there. `match-reference-character-voice-japanese` -> verified.
+
+## 2026-09-21 -- first whole reference video recreated end to end (Fragrant Flower, 110.5 s)
+
+training/recreate_video.py: all 63 shots through rung 3/4 (scene from the script, lights tuned 6 rounds, character proxy where
+the semantic pass + a face box allow), joined with the recreated voice + music, encoded (local only, rule 3). ~2 h on 12 cores.
+
+| measure | result |
+|---|---|
+| frame_score over all 2,649 frames (score_recreation.py) | 0.463 (holdout 0.506) |
+| cut alignment F1 (benchmark/compare.py) | 0.941 |
+| motion-curve correlation | 0.954 |
+| brightness-curve correlation | 0.998 |
+| mean colour similarity | 0.976 |
+| video_score / audio_score / overall (benchmark) | 0.785 / 0.405 / 0.595 |
+| worst shots | S61 0.29 (Netflix streaks), S9 0.29, S41 0.31, S26 0.32, S31 0.33 |
+
+Timing, exposure and colour of the whole trailer are recreated; content is not (backdrop + blobs). Seen in the compare sheet:
+close-ups where the face detector found nothing get no character; on non-character shots the saliency "subject" becomes a
+stray ellipse (sometimes on a subtitle). Next: drop the saliency blob when the semantic pass lists no character, and use the
+anime-seg outline to place characters the face detector misses.
