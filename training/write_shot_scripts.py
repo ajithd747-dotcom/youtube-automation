@@ -438,6 +438,8 @@ def main():
     transcript = json.loads(tr_path.read_text(encoding="utf-8")) if tr_path.exists() else None
     (D_ / "shots").mkdir(exist_ok=True)
     (D_ / "sheets").mkdir(exist_ok=True)
+    sem_path = D_ / "semantic.json"          # vision pass (frame-script-standard step 3), kept apart so a rebuild never wipes it
+    semantic = json.loads(sem_path.read_text(encoding="utf-8")) if sem_path.exists() else None
     grid_path = D_ / "colour_grid32x18.npy"
     grid32 = np.load(grid_path) if grid_path.exists() else None
     index = []
@@ -461,6 +463,8 @@ def main():
         else:
             box, src = None, None
         script["colour"]["regions"] = colour_regions_section(grid32[sh["start"]:sh["end"]] if grid32 is not None else None, box, src)
+        if semantic and str(i) in semantic["shots"]:
+            script["semantic"] = {**semantic["shots"][str(i)], "filled_by": semantic["filled_by"]}
         script["blender_directives"] = blender_directives(script)
         (D_ / "shots" / f"shot_{i:02d}.json").write_text(json.dumps(script, indent=1), encoding="utf-8")
         contact_sheet(D_ / "frames", sh["start"], sh["end"], D_ / "sheets" / f"shot_{i:02d}.jpg")
