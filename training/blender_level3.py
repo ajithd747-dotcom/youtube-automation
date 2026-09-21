@@ -22,6 +22,9 @@ from pathlib import Path
 import bpy
 from mathutils import Vector
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from face_geometry import eye_hulls, face_outline, interpolate_points, mouth_hull, shadow_polygon  # noqa: E402
+
 CAM_DIST = 10.0
 LENS_MM, SENSOR_MM = 50.0, 36.0
 SUBJECT_DEPTH = 3.0            # subject proxy sits this far in front of the backdrop
@@ -321,29 +324,20 @@ def stroke_paths(face_xywh, shape, lines):
     return out
 
 
-def hull_pts(pts):
-    """Convex hull (frame fractions), counter-clockwise, so a landmark group becomes a drawable polygon whatever its point order."""
-    pts = sorted(set(map(tuple, pts)))
-    if len(pts) < 3:
-        return pts
-    cross = lambda o, a, b: (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
-    lower, upper = [], []
-    for p in pts:
-        while len(lower) >= 2 and cross(lower[-2], lower[-1], p) <= 0:
-            lower.pop()
-        lower.append(p)
-    for p in reversed(pts):
-        while len(upper) >= 2 and cross(upper[-2], upper[-1], p) <= 0:
-            upper.pop()
-        upper.append(p)
-    return lower[:-1] + upper[:-1]
+def face_tones(keys):
+    """Colours of the face from the measured tones (the keyframe nearest the middle that measured them), or None."""
+    measured = [k["tones"] for k in keys or [] if isinstance((k.get("tones") or {}).get("light_rgb"), list)]
+    return measured[len(measured) // 2] if measured else None
 
 
-def build_landmark_face(ch, ink_rgb):
-    """Flat anime face whose every part sits on the measured landmarks: skin face shape, eye whites, irises, shines, lash lines,
-    brows, jaw line, mouth. Iris colour and eye white are the same style defaults as build_face_features."""
+def build_landmark_face(ch, ink_rgb, tones=None):
+    """Flat anime face whose every part sits on the measured landmarks: skin face shape (measured light tone), the measured
+    darker tone (shadow or bangs over the face), eye whites, irises, shines, lash lines, brows, jaw line, mouth. Iris colour
+    and eye white are the same style defaults as build_face_features."""
     iris = [int(v * 0.55) for v in ch["hair_rgb"]] if isinstance(ch.get("hair_rgb"), list) else LINE_DARK
-    f = {"face": make_flat("lm_face", ch["skin_rgb"])}
+    f = {"face": make_flat("lm_face", tones["light_rgb"] if tones else ch["skin_rgb"])}
+    if tones and isinstance(tones.get("dark_rgb"), list):
+        f["dark"] = make_flat("lm_dark", tones["dark_rgb"])
     for side in ("l", "r"):
         f[f"white_{side}"] = make_flat(f"lm_white_{side}", EYE_WHITE)
         f[f"iris_{side}"] = make_flat(f"lm_iris_{side}", iris)
@@ -352,23 +346,18 @@ def build_landmark_face(ch, ink_rgb):
     return f
 
 
-def place_landmark_face(f, pts, width_frac, aspect):
-    """pts: 28 [x, y, conf] (training/measure_face_landmarks.py order). The face shape is the jaw contour (0-4) closed by an arc
-    that ends just above the brows, where anime bangs begin. It sits in front of the hair proxy (an ellipsoid bulges toward the
-    camera, so a face plane at head depth would be buried in it)."""
-    P = [(p[0], p[1]) for p in pts]
+def place_landmark_face(f, pts, width_frac, aspect, tones=None):
+    """pts: 28 [x, y, conf] (training/measure_face_landmarks.py order), shapes from face_geometry. The face sits in front of
+    the hair proxy (an ellipsoid bulges toward the camera, so a face plane at head depth would be buried in it)."""
     d = CAM_DIST - SUBJECT_DEPTH - 1.5
-    jaw = P[0:5]
-    brow_y = min(p[1] for p in P[5:11])
-    eye_y = sum(p[1] for p in P[11:23]) / 12
-    top = brow_y - 0.35 * max(eye_y - brow_y, 0.02)
-    (lx, ly), (rx, ry) = jaw[0], jaw[4]
-    cx, rw = (lx + rx) / 2, (rx - lx) / 2
-    arc = [(cx + rw * math.cos(math.pi * k / 12), min(ly, ry) - (min(ly, ry) - top) * math.sin(math.pi * k / 12)) for k in range(1, 12)]
-    set_flat_outline(f["face"], jaw + arc, d, aspect)          # jaw runs image-left -> image-right; the arc returns over the top
-    strokes = [jaw]
-    for side, grp, brow in (("l", P[11:17], P[5:8]), ("r", P[17:23], P[8:11])):
-        eye = hull_pts(grp)
+    face = face_outline(pts)
+    set_flat_outline(f["face"], face, d, aspect)
+    if "dark" in f:
+        dark = shadow_polygon(face, tones["dark_direction_deg"], tones["dark_share"], aspect) if tones and isinstance(tones.get("dark_share"), (int, float)) \
+            and isinstance(tones.get("dark_direction_deg"), (int, float)) else []
+        set_flat_outline(f["dark"], dark if len(dark) >= 3 else face[:3], d - (0.01 if len(dark) >= 3 else -0.5), aspect)   # none: hidden behind the face
+    strokes = [[tuple(p[:2]) for p in pts[0:5]]]
+    for side, eye, brow in (("l", eye_hulls(pts)[0], pts[5:8]), ("r", eye_hulls(pts)[1], pts[8:11])):
         ex = sum(p[0] for p in eye) / len(eye)
         ey = sum(p[1] for p in eye) / len(eye)
         ew = max(p[0] for p in eye) - min(p[0] for p in eye)
@@ -376,12 +365,20 @@ def place_landmark_face(f, pts, width_frac, aspect):
         set_flat_outline(f[f"white_{side}"], eye, d - 0.02, aspect)
         set_flat_outline(f[f"iris_{side}"], ellipse_pts(ex, ey + 0.05 * eh, 0.22 * ew, 0.48 * eh), d - 0.04, aspect)
         set_flat_outline(f[f"shine_{side}"], ellipse_pts(ex - 0.06 * ew, ey - 0.15 * eh, 0.05 * ew, 0.1 * eh), d - 0.06, aspect)
-        upper = sorted((p for p in eye if p[1] <= ey), key=lambda p: p[0])
-        strokes += [upper, sorted(brow, key=lambda p: p[0])]
-    mouth = hull_pts(P[24:28])
+        strokes += [sorted((p for p in eye if p[1] <= ey), key=lambda p: p[0]), sorted((tuple(p[:2]) for p in brow), key=lambda p: p[0])]
+    mouth = mouth_hull(pts)
     if len(mouth) >= 3:
         strokes.append(mouth + [mouth[0]])
     set_strokes(f["ink"], strokes, width_frac, d - 0.08, aspect)
+
+
+def place_landmark_face_at(obj, spec, frame):
+    """Landmarks interpolated to `frame` between the measured keyframes (training/face_geometry.interpolate_points)."""
+    la0 = spec.get("line_art") or {}
+    w = la0["stroke_width_frac"] if isinstance(la0.get("stroke_width_frac"), (int, float)) else 0.003
+    keys = spec.get("landmark_keys") or [{"frame": 0, "points": spec["landmarks"]}]
+    tones = face_tones(keys)
+    place_landmark_face(obj["character"]["_landmark_face"], interpolate_points(keys, frame), w, obj["aspect"], tones)
 
 
 def place_character(parts, face_xywh, shape, aspect, outline=None):
@@ -451,7 +448,8 @@ def build_scene(sc, spec, width, height):
             subject["_features"] = build_face_features(ch)
         if spec.get("face_from_landmarks") and spec.get("landmarks") and isinstance(ch.get("skin_rgb"), list):
             la0 = spec.get("line_art") or {}
-            subject["_landmark_face"] = build_landmark_face(ch, la0["ink_rgb"] if isinstance(la0.get("ink_rgb"), list) else LINE_DARK)
+            subject["_landmark_face"] = build_landmark_face(ch, la0["ink_rgb"] if isinstance(la0.get("ink_rgb"), list) else LINE_DARK,
+                                                            face_tones(spec.get("landmark_keys")))
             if "head" in subject:                                   # the measured face replaces the head ellipsoid
                 bpy.data.objects.remove(subject.pop("head"))
         la = spec.get("line_art")
@@ -522,9 +520,7 @@ def apply_candidate(sc, obj, spec, p):
         if "_features" in obj["character"]:
             place_face_features(obj["character"]["_features"], spec["subject_bbox_xywh"], p.get("shape"), obj["aspect"])
         if "_landmark_face" in obj["character"]:
-            la0 = spec.get("line_art") or {}
-            w = la0["stroke_width_frac"] if isinstance(la0.get("stroke_width_frac"), (int, float)) else 0.003
-            place_landmark_face(obj["character"]["_landmark_face"], spec["landmarks"], w, obj["aspect"])
+            place_landmark_face_at(obj, spec, 0)
         if "_fringe" in obj["character"]:
             x, y, w, h = spec["subject_bbox_xywh"]
             s = {**DEFAULT_SHAPE, **(p.get("shape") or {})}
@@ -577,6 +573,8 @@ def main():
         key_animation(sc, obj, spec, p)
         for f in job["frames"]:
             sc.frame_set(int(f))
+            if obj["character"] and "_landmark_face" in obj["character"]:
+                place_landmark_face_at(obj, spec, int(f))        # the face moves between its measured keyframes
             sc.render.filepath = str(out / f"c{c:02d}_f{int(f):05d}.png")
             bpy.ops.render.render(write_still=True)
             n += 1

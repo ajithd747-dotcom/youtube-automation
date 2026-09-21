@@ -280,3 +280,23 @@ parametric eyes, line art) left it flat or lowered it. edge_f1 up on both. frame
 (0.49 -> 0.41): the flat face plane is lit evenly where the ellipsoid had a gradient, and the girl's face is bright with
 blush. Next: cel shading of the face plane from the measured light direction, landmarks animated across keyframes
 (mouth, blinks), S32 once Fragrant v2 finishes (its box changes).
+
+## 2026-09-21 -- landmark face: measured face tones + landmarks animated between keyframes
+
+measure_face_landmarks.py now also measures `tones` per face: two LAB clusters inside the face region (minus eyes, mouth,
+brows) -> light_rgb (skin), dark_rgb, dark_share, dark_direction_deg. On FF 27 / 50 the dark tone is the bangs over the
+forehead (share 0.30-0.38, direction ~275 deg = up), on 32 (short blond hair) only 0.02 -- so the field is named "dark",
+not "shadow": the measurement cannot tell skin shadow from hair. Blender paints the face in the light tone and the dark
+tone on the measured side at the measured share (face_geometry.shadow_polygon), and re-places every landmark part on
+every rendered frame, interpolated between the 3 measured keyframes. Face polygons now live in training/face_geometry.py,
+imported by both the measurement and Blender, so the measured region is the drawn region.
+
+| shot | rung 5 ellipsoid: frame_score / hist / edge_f1 / holdout | static landmark face | + tones + animation |
+|---|---|---|---|
+| FF 27 | 0.560 / 0.652 / 0.261 / 0.513 | 0.589 / 0.653 / 0.383 / 0.516 | 0.604 / 0.701 / 0.390 / 0.513 |
+| FF 50 | 0.444 / 0.491 / 0.116 / 0.394 | 0.426 / 0.408 / 0.183 / 0.398 | 0.444 / 0.436 / 0.175 / 0.406 |
+
+Best frame_score on both shots and the best holdout on 50 (+0.012 over rung 5); on 27 the holdout gives back the static
+face's +0.003. hist recovers most of what the flat face lost. Tones and animation were changed together -- their separate
+contributions are NOT MEASURED. Blinks between keyframes are not captured (3 keyframes per shot).
+Candidate skill: `landmark-placed-anime-face` (holdout up on 50, level on 27; needs a third shot -- S32 after Fragrant v2).
