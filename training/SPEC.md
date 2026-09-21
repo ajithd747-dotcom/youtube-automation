@@ -34,6 +34,7 @@ measured before the next is tried:
 1. layout: sky / mid / low colour bands, gradients, horizon, light direction
 2. silhouettes: characters and large shapes as flat shapes with the right palette and position
 3. line work and shading; camera drift; motion cadence (on 1s/2s/3s)
+3b. parametric from the script alone (no reference pixels): lights, exposure curve, camera path, compositor -- `training/recreate_level3.py`
 4. voice-over (agents/voice) and music (agents/music) matched by `blender_agent/benchmark/compare.py` audio metrics
 
 ## 3. Skill format

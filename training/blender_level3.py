@@ -1,0 +1,221 @@
+"""Runs INSIDE Blender: rung 3 of the recreation ladder -- a parametric scene built from the shot script alone.
+
+    blender -b --python training/blender_level3.py -- job.json
+
+No reference pixels enter this file. job.json carries a scene spec derived from the shot script (build_scene_spec in training/recreate_level3.py)
+and a list of parameter candidates; every candidate is rendered for every requested frame:
+
+    {"spec": {...}, "candidates": [{...params...}, ...], "frames": [0, 7, ...], "width": 320, "height": 180,
+     "samples": 16, "out_dir": "..."}
+
+Output: <out_dir>/c{k:02d}_f{frame:05d}.png, frame = shot-relative frame index.
+
+Scene: a backdrop plane coloured with the measured top/middle/bottom band colours (colour ramp over height), a subject proxy
+(ellipsoid) at the measured face/subject box, a key point light from the measured screen-space light direction, a world fill, a camera
+following the measured path keyframes, film exposure keyed to the measured exposure curve, and compositor bloom + vignette.
+"""
+import json
+import math
+import sys
+from pathlib import Path
+
+import bpy
+from mathutils import Vector
+
+CAM_DIST = 10.0
+LENS_MM, SENSOR_MM = 50.0, 36.0
+SUBJECT_DEPTH = 3.0            # subject proxy sits this far in front of the backdrop
+
+
+def srgb_to_linear(c):
+    return [v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4 for v in c]
+
+
+def rgb_lin(rgb_uint8, gain=1.0):
+    return [min(max(v * gain, 0.0), 1.0) for v in srgb_to_linear([x / 255.0 for x in rgb_uint8])]
+
+
+def view_size_at(distance, aspect):
+    w = SENSOR_MM / LENS_MM * distance
+    return w, w / aspect
+
+
+def setup_render(width, height, samples):
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    sc = bpy.context.scene
+    sc.render.engine = "CYCLES"
+    sc.cycles.device = "CPU"
+    sc.cycles.samples = samples
+    sc.cycles.use_denoising = False
+    sc.cycles.max_bounces = 2
+    sc.render.resolution_x, sc.render.resolution_y, sc.render.resolution_percentage = width, height, 100
+    sc.render.image_settings.file_format = "PNG"
+    sc.view_settings.view_transform = "Standard"
+    sc.view_settings.look = "None"
+    sc.display_settings.display_device = "sRGB"
+    return sc
+
+
+def diffuse_material(name, colour_lin=None, ramp=None):
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    bsdf = nt.nodes["Principled BSDF"]
+    bsdf.inputs["Roughness"].default_value = 1.0
+    bsdf.inputs["Specular IOR Level"].default_value = 0.0
+    if ramp is None:
+        bsdf.inputs["Base Color"].default_value = (*colour_lin, 1.0)
+        return mat, bsdf, None
+    # vertical colour ramp over the plane's generated Z (0 = bottom, 1 = top)
+    tc = nt.nodes.new("ShaderNodeTexCoord")
+    sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+    cr = nt.nodes.new("ShaderNodeValToRGB")
+    nt.links.new(tc.outputs["Generated"], sep.inputs[0])
+    nt.links.new(sep.outputs["Y"], cr.inputs["Fac"])
+    nt.links.new(cr.outputs["Color"], bsdf.inputs["Base Color"])
+    els = cr.color_ramp.elements
+    while len(els) < len(ramp):
+        els.new(0.5)
+    for el, (pos, col) in zip(els, ramp):
+        el.position, el.color = pos, (*col, 1.0)
+    return mat, bsdf, cr
+
+
+def build_scene(sc, spec, width, height):
+    aspect = width / height
+    cam_data = bpy.data.cameras.new("cam")
+    cam_data.lens, cam_data.sensor_width, cam_data.sensor_fit = LENS_MM, SENSOR_MM, "HORIZONTAL"
+    cam = bpy.data.objects.new("cam", cam_data)
+    cam.location = (0.0, -CAM_DIST, 0.0)
+    cam.rotation_euler = (math.pi / 2, 0.0, 0.0)          # looks along +Y, up = +Z
+    sc.collection.objects.link(cam)
+    sc.camera = cam
+
+    # backdrop: 1.6x the view so camera shift/zoom/roll never shows its edge
+    vw, vh = view_size_at(CAM_DIST, aspect)
+    bpy.ops.mesh.primitive_plane_add(size=1.0, location=(0, 0, 0), rotation=(math.pi / 2, 0, 0))
+    back = bpy.context.active_object
+    back.scale = (vw * 1.6, vh * 1.6, 1)
+    reg = spec["regions"]
+    # the view covers the middle 1/1.6 of the plane's height: map view thirds onto plane coordinates
+    lo, hi = 0.5 - 0.5 / 1.6, 0.5 + 0.5 / 1.6
+    at = lambda f: lo + (hi - lo) * f                        # f = 0 bottom of view, 1 top of view
+    ramp = [(at(1 / 6), rgb_lin(reg["bottom_third_rgb"])), (at(0.5), rgb_lin(reg["middle_third_rgb"])), (at(5 / 6), rgb_lin(reg["top_third_rgb"]))]
+    mat, back_bsdf, back_ramp = diffuse_material("backdrop", ramp=ramp)
+    back.data.materials.append(mat)
+
+    subject = None
+    if spec.get("subject_bbox_xywh") and spec.get("subject_rgb"):
+        x, y, w, h = spec["subject_bbox_xywh"]
+        d = CAM_DIST - SUBJECT_DEPTH
+        svw, svh = view_size_at(d, aspect)
+        cx, cz = (x + w / 2 - 0.5) * svw, (0.5 - (y + h / 2)) * svh
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, radius=0.5, location=(cx, -SUBJECT_DEPTH, cz))
+        subject = bpy.context.active_object
+        subject.scale = (w * svw, min(w, h) * svw * 0.6, h * svh)
+        bpy.ops.object.shade_smooth()
+        smat, _, _ = diffuse_material("subject", colour_lin=rgb_lin(spec["subject_rgb"]))
+        subject.data.materials.append(smat)
+
+    # key = point light off to the brighter side: its falloff paints the measured screen-space gradient even on a flat backdrop
+    # (a sun lights a flat plane evenly and cannot)
+    sun_data = bpy.data.lights.new("key", "POINT")
+    sun_data.shadow_soft_size = 1.0
+    sun = bpy.data.objects.new("key", sun_data)
+    sc.collection.objects.link(sun)
+
+    world = bpy.data.worlds.new("world")
+    world.use_nodes = True
+    sc.world = world
+    bg = world.node_tree.nodes["Background"]
+
+    sc.use_nodes = True
+    nt = sc.node_tree
+    for n in list(nt.nodes):
+        nt.nodes.remove(n)
+    rl = nt.nodes.new("CompositorNodeRLayers")
+    glare = nt.nodes.new("CompositorNodeGlare")
+    glare.glare_type = "BLOOM"
+    ell = nt.nodes.new("CompositorNodeEllipseMask")
+    ell.inputs["Size"].default_value = (0.95, 0.95)
+    blur = nt.nodes.new("CompositorNodeBlur")
+    blur.inputs["Size"].default_value = (0.2 * width, 0.2 * height)     # Blender 4.5: pixel size is a socket, not factor_x/y
+    mix = nt.nodes.new("CompositorNodeMixRGB")
+    mix.blend_type = "MULTIPLY"
+    comp = nt.nodes.new("CompositorNodeComposite")
+    nt.links.new(rl.outputs["Image"], glare.inputs["Image"])
+    nt.links.new(ell.outputs["Mask"], blur.inputs["Image"])
+    nt.links.new(glare.outputs["Image"], mix.inputs[1])
+    nt.links.new(blur.outputs["Image"], mix.inputs[2])
+    nt.links.new(mix.outputs["Image"], comp.inputs["Image"])
+    return {"cam": cam, "sun": sun, "bg": bg, "glare": glare, "vignette": mix, "subject": subject, "back_bsdf": back_bsdf}
+
+
+KEY_RADIUS = 9.0                # key light distance from the backdrop centre
+KEY_ENERGY_W = 1000.0           # key_energy 1.0 = this many watts
+
+
+def aim_key(key, screen_angle_deg, elevation_deg):
+    """Place the key on the brighter side of the screen: screen angle 0 = right, 90 = down (camera looks +Y, up +Z).
+    elevation = angle out of the backdrop plane toward the camera; low elevation = grazing light = strong gradient."""
+    a, e = math.radians(screen_angle_deg), math.radians(elevation_deg)
+    toward_light = Vector((math.cos(a) * math.cos(e), -math.sin(e), -math.sin(a) * math.cos(e)))   # -Y = toward the camera
+    key.location = toward_light * KEY_RADIUS
+
+
+def apply_candidate(sc, obj, spec, p):
+    aim_key(obj["sun"], p["key_screen_angle_deg"], p["key_elevation_deg"])
+    obj["sun"].data.energy = p["key_energy"] * KEY_ENERGY_W
+    obj["bg"].inputs["Color"].default_value = (*rgb_lin(spec["world_rgb"]), 1.0)
+    obj["bg"].inputs["Strength"].default_value = p["fill_strength"]
+    obj["glare"].inputs["Strength"].default_value = p["bloom_strength"]
+    obj["glare"].inputs["Threshold"].default_value = 0.8
+    obj["vignette"].inputs["Fac"].default_value = p["vignette"]
+
+
+def key_animation(sc, obj, spec, p):
+    """Camera path and exposure curve as real keyframes (shot-relative frames)."""
+    cam = obj["cam"]
+    base_lens = LENS_MM
+    for k in spec["camera_keys"]:
+        f = k["frame"]
+        cam.data.shift_x = -k["dx"]                    # image moves opposite to the camera window
+        cam.data.shift_y = k["dy"]                     # dy > 0 = image moves down = window moves up
+        cam.data.lens = base_lens * (1.0 + k["zoom"])
+        cam.rotation_euler = (math.pi / 2, -math.radians(k["roll_deg"]), 0.0)
+        cam.data.keyframe_insert("shift_x", frame=f)
+        cam.data.keyframe_insert("shift_y", frame=f)
+        cam.data.keyframe_insert("lens", frame=f)
+        cam.keyframe_insert("rotation_euler", frame=f)
+    offsets = p.get("exposure_offsets") or {}
+    for k in spec["exposure_keys"]:
+        sc.view_settings.exposure = p["exposure"] + float(offsets.get(str(k["frame"]), 0.0))
+        sc.view_settings.keyframe_insert("exposure", frame=k["frame"])
+
+
+def main():
+    job = json.loads(Path(sys.argv[sys.argv.index("--") + 1]).read_text(encoding="utf-8"))
+    spec = job["spec"]
+    out = Path(job["out_dir"])
+    out.mkdir(parents=True, exist_ok=True)
+    sc = setup_render(int(job["width"]), int(job["height"]), int(job.get("samples", 16)))
+    obj = build_scene(sc, spec, int(job["width"]), int(job["height"]))
+    n = 0
+    for c, p in enumerate(job["candidates"]):
+        apply_candidate(sc, obj, spec, p)
+        if sc.animation_data:
+            sc.animation_data_clear()
+        if obj["cam"].animation_data:
+            obj["cam"].animation_data_clear()
+        if obj["cam"].data.animation_data:
+            obj["cam"].data.animation_data_clear()
+        key_animation(sc, obj, spec, p)
+        for f in job["frames"]:
+            sc.frame_set(int(f))
+            sc.render.filepath = str(out / f"c{c:02d}_f{int(f):05d}.png")
+            bpy.ops.render.render(write_still=True)
+            n += 1
+    print(f"LEVEL3_DONE {n} renders -> {out}")
+
+
+main()

@@ -264,6 +264,27 @@ def colour_section(rows, fps):
                       "meaning": "RGB deviation from neutral in the darkest / brightest 20% of pixels"}}
 
 
+def colour_regions_section(grid_frames, subject_bbox_xywh, subject_source):
+    """Where the colours sit, from the measured 32x18 colour grid (colour_grid32x18.npy, content area only): median RGB of the top,
+    middle and bottom thirds and of the subject box, over the shot. A colour script's blocking, not a picture: four colours."""
+    if grid_frames is None or len(grid_frames) == 0:
+        return NM
+    g = np.median(grid_frames.astype(np.float32), axis=0)            # [18,32,3] RGB
+    gh, gw = g.shape[:2]
+    band = lambda y0, y1: [int(v) for v in np.median(g[y0:y1].reshape(-1, 3), axis=0)]
+    out = {"top_third_rgb": band(0, gh // 3), "middle_third_rgb": band(gh // 3, 2 * gh // 3), "bottom_third_rgb": band(2 * gh // 3, gh),
+           "subject_rgb": NM, "subject_bbox_xywh": NM, "subject_source": NM,
+           "measured_on": "colour_grid32x18.npy (per-frame cell means of the content area), median over the shot"}
+    if subject_bbox_xywh is not None and all(v is not None and v == v for v in subject_bbox_xywh):
+        x, y, w, h = subject_bbox_xywh
+        x0, x1 = int(np.floor(x * gw)), int(np.ceil((x + w) * gw))
+        y0, y1 = int(np.floor(y * gh)), int(np.ceil((y + h) * gh))
+        cells = g[max(y0, 0):min(max(y1, y0 + 1), gh), max(x0, 0):min(max(x1, x0 + 1), gw)].reshape(-1, 3)
+        if len(cells):
+            out.update(subject_rgb=[int(v) for v in np.median(cells, axis=0)], subject_bbox_xywh=[r(v) for v in subject_bbox_xywh], subject_source=subject_source)
+    return out
+
+
 def transition_section(rows, prev_rows, next_rows, fps):
     def edge_kind(window_rows, boundary_score, side):
         diss = np.nanmax(series(window_rows, "transition.dissolve_score")) if window_rows else float("nan")
@@ -417,6 +438,8 @@ def main():
     transcript = json.loads(tr_path.read_text(encoding="utf-8")) if tr_path.exists() else None
     (D_ / "shots").mkdir(exist_ok=True)
     (D_ / "sheets").mkdir(exist_ok=True)
+    grid_path = D_ / "colour_grid32x18.npy"
+    grid32 = np.load(grid_path) if grid_path.exists() else None
     index = []
     for i in expand(a.shots, len(shots)):
         sh = shots[i]
@@ -429,6 +452,15 @@ def main():
                   "transitions": transition_section(rs, rows[sh["start"] - 1:sh["start"]] or None, rows[sh["end"]:sh["end"] + 1] or None, fps),
                   "audio": audio_section(rs, fps, transcript), "characters": characters_section(rs, fps), "text_on_screen": text_section(rs, fps),
                   "semantic": {"setting": NM, "characters": NM, "actions": NM, "props": NM, "weather_particles_seen": NM, "mood": NM, "filled_by": None}}
+        ch, co = script["characters"], script["composition"]
+        faces = [t["largest_face_bbox_xywh"] for t in ch["face_track"] if t.get("largest_face_bbox_xywh")] if isinstance(ch["face_track"], list) else []
+        if faces and isinstance(ch["frames_with_face_share"], (int, float)) and ch["frames_with_face_share"] >= 0.5:
+            box, src = list(np.median(np.array(faces, float), axis=0)), "characters.face_track (median largest face)"
+        elif isinstance(co["subject_bbox_median"], list) and None not in co["subject_bbox_median"]:
+            box, src = co["subject_bbox_median"], "composition.subject_bbox_median (saliency)"
+        else:
+            box, src = None, None
+        script["colour"]["regions"] = colour_regions_section(grid32[sh["start"]:sh["end"]] if grid32 is not None else None, box, src)
         script["blender_directives"] = blender_directives(script)
         (D_ / "shots" / f"shot_{i:02d}.json").write_text(json.dumps(script, indent=1), encoding="utf-8")
         contact_sheet(D_ / "frames", sh["start"], sh["end"], D_ / "sheets" / f"shot_{i:02d}.jpg")

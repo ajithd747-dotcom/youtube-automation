@@ -55,3 +55,26 @@ baseline, not creation from scratch. The from-scratch part -- the skill the agen
 from parametric Blender constructs driven by the shot script's `blender_directives` (key/fill lights, world, camera path,
 depth of field, glare/vignette, particles), with no reference pixels in the loop. Rung 3 should be that, scored by the same
 frame metrics plus feature-level checks (camera path, exposure curve, palette).
+
+## 2026-09-21 -- rung 3 (parametric, from the script alone) on two videos
+
+Blender builds the shot from `shots/shot_NN.json` only -- no reference pixels (training/recreate_level3.py, blender_level3.py):
+backdrop with the measured top/middle/bottom band colours (new measured script field `colour.regions`, from the 32x18 grid),
+an ellipsoid subject proxy at the face/subject box, a point key toward the measured light direction, world fill, camera on the
+measured path keyframes, exposure keyed to the measured curve, compositor vignette + bloom. Coordinate descent over 7 light /
+compositor parameters minimises the error between the render's features (measured with describe_frames.measure_lighting)
+and the script's numbers. frame_score and holdout are computed afterwards and never tuned against.
+
+| video / shot | frame_score untuned -> tuned | holdout | feature error | exposure-curve MAE |
+|---|---|---|---|---|
+| Fragrant Flower 27 (character) | 0.419 -> 0.456 | 0.505 -> 0.523 | 5.23 -> 1.18 | 0.177 -> 0.029 |
+| Blue Box 77 (character) | 0.310 -> 0.418 | 0.280 -> 0.308 | 4.44 -> 1.44 | 0.265 -> 0.003 |
+| Blue Box 1 (no face) | 0.284 -> 0.405 | 0.349 -> 0.380 | 4.33 -> 0.78 | 0.258 -> 0.0004 |
+
+~4 min per shot on 12 cores. Checked: key direction round-trips (0/90/180/270 -> 0/90/180/270), camera shift signs and units
+(dx 0.1 -> +0.1 width, dy 0.1 -> +0.177 height = 0.1 frame widths), vignette reaches corner/centre 0.66.
+What it taught: the lighting half of the script is reproducible from numbers; the gap to rung 2 (0.74-0.83) is shapes. Largest
+residuals are vignette, contrast and p95 -- a flat diffuse scene has no small highlights -- and the single pale subject proxy
+(face-box colour is wrong for dark-haired characters). Skill: `script-driven-light-and-exposure-matching` (verified, 2 videos).
+
+**Next:** the vision pass to fill `semantic` (setting, characters, props), so the proxy becomes shapes the script names.
