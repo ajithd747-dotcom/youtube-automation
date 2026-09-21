@@ -213,7 +213,7 @@ Same driver (training/recreate_video.py, rung 3/4, 6 tuning rounds), run by the 
 
 Timing, exposure and colour transfer to a second video; content still does not (backdrop + proxies), and edge_f1 is ~0.04
 on both -- line work is the largest missing component. audio_score 0.0 is a mix-level miss, not voices: the recreation
-mix measures -20.5 LUFS against the reference's 6.3 dB quieter level (lufs_db 6.3), while energy correlation is 0.815 and
+mix measures -20.5 LUFS, 6.3 dB QUIETER than the reference video (-14.2; lufs_db 6.3), while energy correlation is 0.815 and
 tempo matches (bpm_rel 0.007, half-time); key reads F major vs F minor. Next for audio: master to the reference's LUFS.
 
 ## 2026-09-21 -- rung 6: parametric line art on the character proxy -- negative, kept off by default
@@ -239,3 +239,22 @@ only fell 0.88 -> 0.73: generic strand templates cannot put ink where THIS chara
 face box, over the hair fall). Same lesson as rung 2 in reverse: lines in roughly-right places cost ssim and structure more
 than they earn in edge_f1. What would move it is measured structure -- where the eyes, jaw, hairline and hair masses are --
 not more strokes. Stroke layer stays in the code, off unless spec["line_strokes"].
+
+## 2026-09-21 -- audio mastered to the reference's loudness
+
+Why the mix was 6.3 dB quiet: nothing normalised it (peak-limit only), and the only reference level on record was the mono
+22 kHz analysis copy (-17.9 LUFS) -- the original stereo track the benchmark measures reads -14.2. New
+`recreate_audio.master_to_reference`: gain + true-peak limiter (-1 dBFS) to the ORIGINAL reference media's integrated
+loudness, with its channel count, measured by the benchmark's own function (analyze.loudness, ffmpeg ebur128), re-measured
+and corrected until within 0.3 LU. recreate_video.py now encodes the mastered mix.
+
+| Blue Box audio (benchmark/compare.py) | before | mastered |
+|---|---|---|
+| mix LUFS (reference -14.2) | -20.5 | -14.3 |
+| lufs_db | 6.3 | 0.1 |
+| distance score (0 = identical) | 2.012 | 1.018 |
+| audio_score | 0.0 | 0.491 |
+| energy_corr / bands_l1 / key_match | 0.815 / 0.111 / False | 0.822 / 0.127 / False |
+
+What is left of the distance: key mismatch (0.3), spectral centroid 24% low (0.24), loudness range 2.4 LU narrower (0.24).
+Fragrant v2 was already running with the old encoder; its audio gets re-encoded when it finishes.

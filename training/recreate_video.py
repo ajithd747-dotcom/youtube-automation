@@ -16,8 +16,10 @@ import time
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 import recreate_level3 as L3  # noqa: E402
+from recreate_audio import master_to_reference  # noqa: E402
 
 
 def expand(spec, n):
@@ -69,7 +71,11 @@ def run(slug, rounds=6, shots_spec="", out_name="video"):
     audio = HERE / "runs" / D.name / "audio" / "mix.wav"
     cmd = ["ffmpeg", "-y", "-loglevel", "error", "-framerate", meta["fps_rational"], "-i", str(frames_dir / "f_%05d.png")]
     if audio.exists():
-        cmd += ["-i", str(audio), "-c:a", "aac", "-b:a", "192k", "-shortest"]
+        mastered = out / "mix_mastered.wav"
+        lv = master_to_reference(audio, ROOT / "reference vedios" / meta["source"], mastered)
+        print(f"audio mastered to the reference: {lv['before_lufs']} -> {lv['after_lufs']} LUFS (target {lv['target_lufs']}, "
+              f"gain {lv['gain_db']} dB, {lv['channels']} ch)", flush=True)
+        cmd += ["-i", str(mastered), "-c:a", "aac", "-b:a", "192k", "-shortest"]
     cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", str(out / "recreation.mp4")]
     subprocess.run(cmd, check=True)
     subprocess.run([sys.executable, str(HERE / "score_recreation.py"), D.name, str(frames_dir), "--start", "0", "--run", out_name], check=True)

@@ -175,6 +175,33 @@ def lufs(path):
     return float(m.group(1)) if m else None
 
 
+def master_to_reference(mix_wav, reference_media, out_wav, tolerance_lu=0.3, true_peak_dbfs=-1.0):
+    """Gain + true-peak limiter so out_wav measures the reference's integrated loudness, with the reference's channel count.
+    Measured by agents/music/tools/analyze.loudness (ffmpeg ebur128) -- the function the benchmark scores with -- on the
+    ORIGINAL reference media, not the mono 22 kHz analysis copy (a mono downmix of a stereo track reads ~3 LU lower).
+    Returns {"target_lufs", "before_lufs", "after_lufs", "gain_db", "channels"}."""
+    import analyze as A
+    target = A.loudness(reference_media)["lufs"]
+    ch = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=channels", "-of", "csv=p=0", str(reference_media)],
+                        capture_output=True, text=True).stdout.strip()
+    ch = int(ch) if ch.isdigit() else 2
+    limit = 10 ** (true_peak_dbfs / 20)
+
+    def render(gain_db):
+        subprocess.run(["ffmpeg", "-y", "-loglevel", "error", "-i", str(mix_wav), "-ac", str(ch), "-ar", str(SR),
+                        "-af", f"volume={gain_db:.2f}dB,alimiter=limit={limit:.4f}:level=false", str(out_wav)], check=True)
+        return A.loudness(out_wav)["lufs"]
+
+    before = render(0.0)
+    gain, got = 0.0, before
+    for _ in range(4):                                         # the limiter eats some of the gain on loud passages: correct and re-measure
+        if target is None or got is None or abs(target - got) <= tolerance_lu:
+            break
+        gain += target - got
+        got = render(gain)
+    return {"target_lufs": target, "before_lufs": before, "after_lufs": got, "gain_db": round(gain, 2), "channels": ch}
+
+
 def run(slug, music_rounds=3):
     import analyze as A
     from agent import MusicAgent, compare
