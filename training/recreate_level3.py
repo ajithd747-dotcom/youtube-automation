@@ -1,7 +1,7 @@
 """Rung 3 of the recreation ladder: build the shot from its SCRIPT alone as a parametric Blender scene, then tune the scene's
 lights, exposure and compositor until the render's measured features match the script's measured targets.
 
-    .venv/bin/python training/recreate_level3.py <slug> <shot> [--rounds 10] [--tag NAME]
+    .venv/bin/python training/recreate_level3.py <slug> <shot> [--rounds 10] [--tag NAME] [--no-character]
 
 No reference pixels are read here or in Blender: the only input is training/reference/<slug>/shots/shot_NN.json. The tuning
 loop measures its own renders with the same functions that measured the reference (training/describe_frames.py) and compares
@@ -87,6 +87,9 @@ def build_scene_spec(script):
         "subject_bbox_xywh": reg["subject_bbox_xywh"] if isinstance(reg["subject_bbox_xywh"], list) else None,
         "subject_rgb": reg["subject_rgb"] if isinstance(reg["subject_rgb"], list) else None,
         "world_rgb": reg["middle_third_rgb"],
+        # rung 4: the vision pass says who is on screen; only then does the face box become a character (colours measured)
+        "character": reg.get("character") if isinstance(reg.get("character"), dict) and isinstance(script.get("semantic", {}).get("characters"), list)
+                     and script["semantic"]["characters"] else None,
         "camera_keys": keys,
         "exposure_keys": [{"frame": int(e["frame"]), "luma": float(e["luma"])} for e in exp] or [{"frame": 0, "luma": float(li["exposure_luma"]["median"])}],
         "targets": {name: dig(script, path) for name, (path, _) in FEATURES.items()},
@@ -232,12 +235,14 @@ def render_and_score(D, spec, params, lo, run_name, rect):
             "exposure_curve_mae": round(float(np.abs(got_curve - tgt_curve).mean()), 4)}
 
 
-def run(slug, shot, rounds=10, tag=None):
+def run(slug, shot, rounds=10, tag=None, character=True):
     D = find_reference(slug)
     meta = json.loads((D / "meta.json").read_text(encoding="utf-8"))
     script = json.loads((D / "shots" / f"shot_{shot:02d}.json").read_text(encoding="utf-8"))
     lo = script["frames"][0]
     spec = build_scene_spec(script)
+    if not character:
+        spec["character"] = None
     name = tag or f"level3_shot{shot:02d}"
     work = HERE / "runs" / D.name / name
     work.mkdir(parents=True, exist_ok=True)
@@ -250,7 +255,7 @@ def run(slug, shot, rounds=10, tag=None):
     untuned = render_and_score(D, spec, p0, lo, f"{name}/untuned", meta["content_rect_640"])
     tuned = render_and_score(D, spec, p1, lo, f"{name}/tuned", meta["content_rect_640"])
     report = {"slug": D.name, "shot": shot, "frames": spec["frames"], "seconds_wall": round(time.time() - t0, 1),
-              "inputs": spec["provenance"] + " only (no reference pixels)", "untuned": untuned, "tuned": tuned,
+              "inputs": spec["provenance"] + " only (no reference pixels)", "character_proxy": spec["character"] is not None, "untuned": untuned, "tuned": tuned,
               "params_untuned": p0, "params_tuned": p1, "tuning_log": log}
     (work / "report.json").write_text(json.dumps(report, indent=1), encoding="utf-8")
     for k, v in (("untuned", untuned), ("tuned", tuned)):
@@ -265,8 +270,9 @@ def main():
     ap.add_argument("shot", type=int)
     ap.add_argument("--rounds", type=int, default=10)
     ap.add_argument("--tag", default=None)
+    ap.add_argument("--no-character", action="store_true", help="rung-3 ablation: ignore the semantic character proxy")
     a = ap.parse_args()
-    run(a.slug, a.shot, a.rounds, a.tag)
+    run(a.slug, a.shot, a.rounds, a.tag, not a.no_character)
 
 
 if __name__ == "__main__":

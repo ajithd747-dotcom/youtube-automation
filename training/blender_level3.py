@@ -81,6 +81,44 @@ def diffuse_material(name, colour_lin=None, ramp=None):
     return mat, bsdf, cr
 
 
+def screen_ellipsoid(name, cx, cy, sw, sh, dist, aspect, rgb, depth_ratio=0.6, box=False):
+    """Ellipsoid (or bevelled box) whose silhouette covers the screen box centred (cx, cy) of size (sw, sh) in frame fractions,
+    at `dist` from the camera."""
+    vw, vh = view_size_at(dist, aspect)
+    loc = ((cx - 0.5) * vw, dist - CAM_DIST, (0.5 - cy) * vh)          # camera sits at y = -CAM_DIST looking +Y
+    if box:
+        bpy.ops.mesh.primitive_cube_add(size=1.0, location=loc)
+    else:
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, radius=0.5, location=loc)
+    o = bpy.context.active_object
+    o.name = name
+    o.scale = (sw * vw, min(sw * vw, sh * vh) * depth_ratio, sh * vh)
+    if box:
+        bev = o.modifiers.new("round", "BEVEL")
+        bev.width, bev.segments = 0.25 * min(sw * vw, sh * vh), 6
+    bpy.ops.object.shade_smooth()
+    mat, _, _ = diffuse_material(name, colour_lin=rgb_lin(rgb))
+    o.data.materials.append(mat)
+    return o
+
+
+def build_character(face_xywh, ch, aspect):
+    """Character proxy from the semantic pass + measured colours: body (behind), hair (behind the head), head (front).
+    Anime face boxes span brows to chin; hair extends above, the body starts below the chin."""
+    x, y, w, h = face_xywh
+    cx = x + w / 2
+    d_head = CAM_DIST - SUBJECT_DEPTH
+    parts = []
+    if isinstance(ch.get("body_rgb"), list):
+        top = y + 0.95 * h
+        parts.append(screen_ellipsoid("body", cx, (top + 1.3) / 2, 2.0 * w, 1.3 - top, d_head + 0.8, aspect, ch["body_rgb"], 0.5, box=True))
+    if isinstance(ch.get("hair_rgb"), list):
+        parts.append(screen_ellipsoid("hair", cx, y + 0.35 * h, 1.15 * w, 1.05 * h, d_head + 0.4, aspect, ch["hair_rgb"], 0.7))
+    if isinstance(ch.get("skin_rgb"), list):
+        parts.append(screen_ellipsoid("head", cx, y + 0.6 * h, 0.75 * w, 0.8 * h, d_head, aspect, ch["skin_rgb"], 0.7))
+    return parts
+
+
 def build_scene(sc, spec, width, height):
     aspect = width / height
     cam_data = bpy.data.cameras.new("cam")
@@ -105,17 +143,12 @@ def build_scene(sc, spec, width, height):
     back.data.materials.append(mat)
 
     subject = None
-    if spec.get("subject_bbox_xywh") and spec.get("subject_rgb"):
+    ch = spec.get("character")
+    if ch and spec.get("subject_bbox_xywh"):
+        subject = build_character(spec["subject_bbox_xywh"], ch, aspect)
+    elif spec.get("subject_bbox_xywh") and spec.get("subject_rgb"):
         x, y, w, h = spec["subject_bbox_xywh"]
-        d = CAM_DIST - SUBJECT_DEPTH
-        svw, svh = view_size_at(d, aspect)
-        cx, cz = (x + w / 2 - 0.5) * svw, (0.5 - (y + h / 2)) * svh
-        bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, radius=0.5, location=(cx, -SUBJECT_DEPTH, cz))
-        subject = bpy.context.active_object
-        subject.scale = (w * svw, min(w, h) * svw * 0.6, h * svh)
-        bpy.ops.object.shade_smooth()
-        smat, _, _ = diffuse_material("subject", colour_lin=rgb_lin(spec["subject_rgb"]))
-        subject.data.materials.append(smat)
+        subject = screen_ellipsoid("subject", x + w / 2, y + h / 2, w, h, CAM_DIST - SUBJECT_DEPTH, aspect, spec["subject_rgb"], depth_ratio=0.6)
 
     # key = point light off to the brighter side: its falloff paints the measured screen-space gradient even on a flat backdrop
     # (a sun lights a flat plane evenly and cannot)

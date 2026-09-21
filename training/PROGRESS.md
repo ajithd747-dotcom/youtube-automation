@@ -78,3 +78,19 @@ residuals are vignette, contrast and p95 -- a flat diffuse scene has no small hi
 (face-box colour is wrong for dark-haired characters). Skill: `script-driven-light-and-exposure-matching` (verified, 2 videos).
 
 **Next:** the vision pass to fill `semantic` (setting, characters, props), so the proxy becomes shapes the script names.
+
+## 2026-09-21 -- rung 4 (semantic character proxy) on Fragrant Flower -- mixed
+
+Vision pass filled `semantic` for all 63 Fragrant Flower shots (reference/<slug>/semantic.json, local). When the semantic pass
+lists a character AND a face box exists, the single sphere becomes head (skin) + hair + body, colours measured from the grid
+around the face box (new script field `colour.regions.character`). Same tuning loop; `--no-character` is the rung-3 ablation.
+
+| shot | rung 3 frame_score / holdout | rung 4 frame_score / holdout |
+|---|---|---|
+| FF 27 (black-haired boy) | 0.456 / 0.523 | 0.534 / 0.506 |
+| FF 50 (dark-purple-haired girl) | 0.379 / 0.414 | 0.431 / 0.395 |
+| FF 32 (blond boy) | 0.568 / 0.609 | unchanged: face detector found 0 faces, no proxy built |
+
+What it taught: right colours in roughly the right places lift frame_score (hist, ssim), but the holdout FALLS on both shots --
+ellipsoid outlines sit where the real ones are not. Frame_score alone would have called this a win. Next: silhouette
+shape (hair outline, shoulders) and the face detector's misses (use semantic characters when detection is empty).

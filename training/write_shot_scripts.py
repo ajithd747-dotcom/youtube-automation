@@ -282,7 +282,28 @@ def colour_regions_section(grid_frames, subject_bbox_xywh, subject_source):
         cells = g[max(y0, 0):min(max(y1, y0 + 1), gh), max(x0, 0):min(max(x1, x0 + 1), gw)].reshape(-1, 3)
         if len(cells):
             out.update(subject_rgb=[int(v) for v in np.median(cells, axis=0)], subject_bbox_xywh=[r(v) for v in subject_bbox_xywh], subject_source=subject_source)
+        if subject_source and subject_source.startswith("characters.face_track"):
+            out["character"] = character_colours(g, subject_bbox_xywh)
     return out
+
+
+def character_colours(g, face_xywh):
+    """Measured colours of a character around its detected face box (anime face boxes span brows to chin): hair = band above
+    the box, skin = lower middle of the box, body = band below the box. Median of 32x18 grid cells; NOT MEASURED if the band
+    falls outside the frame."""
+    gh, gw = g.shape[:2]
+    x, y, w, h = face_xywh
+
+    def med(x0, y0, x1, y1):
+        c0, c1 = max(int(np.floor(x0 * gw)), 0), min(int(np.ceil(x1 * gw)), gw)
+        r0, r1 = max(int(np.floor(y0 * gh)), 0), min(int(np.ceil(y1 * gh)), gh)
+        if c1 <= c0 or r1 <= r0:
+            return NM
+        return [int(v) for v in np.median(g[r0:r1, c0:c1].reshape(-1, 3), axis=0)]
+    return {"hair_rgb": med(x + 0.1 * w, y - 0.35 * h, x + 0.9 * w, y + 0.05 * h),
+            "skin_rgb": med(x + 0.3 * w, y + 0.45 * h, x + 0.7 * w, y + 0.85 * h),
+            "body_rgb": med(x - 0.2 * w, y + 1.25 * h, x + 1.2 * w, 1.0),
+            "measured_on": "32x18 colour grid cells above / inside / below the median face box"}
 
 
 def transition_section(rows, prev_rows, next_rows, fps):
