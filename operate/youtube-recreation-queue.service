@@ -8,6 +8,8 @@ StartLimitBurst=3
 
 [Service]
 Type=simple
+# tools/bin holds ffmpeg and the other project binaries; the systemd user PATH does not include it
+Environment=PATH=%h/youtube-automation/tools/bin:/usr/local/bin:/usr/bin:/bin
 ExecStart=%h/youtube-automation/operate/run_recreation_queue.sh
 Nice=10
 Restart=on-failure

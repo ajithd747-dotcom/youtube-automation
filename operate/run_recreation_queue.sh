@@ -14,8 +14,9 @@ while read -r log_name args; do
   log="training/runs/$log_name.log"
   [[ -s "$log" ]] && mv "$log" "training/runs/${log_name}_$(date +%Y%m%d-%H%M%S).log"
   echo "start $log_name: recreate_video.py $args"
+  # stdin is /dev/null: ffmpeg inside a job would otherwise read the rest of the queue file this loop is reading
   # shellcheck disable=SC2086
-  if .venv/bin/python -u training/recreate_video.py $args > "$log" 2>&1 && grep -q "recreation.mp4" "$log"; then
+  if .venv/bin/python -u training/recreate_video.py $args < /dev/null > "$log" 2>&1 && grep -q "recreation.mp4" "$log"; then
     date -Is > "$marker"; echo "done $log_name"
   else
     echo "FAILED $log_name -- see $log"; exit 1

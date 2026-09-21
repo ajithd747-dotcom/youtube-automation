@@ -193,3 +193,25 @@ tuned with the shape; colours are style defaults (the grid cannot resolve eyes).
 
 +0.02 frame_score, holdout flat -- the gain is edge_f1 (0.26 -> 0.38 on 27). Not enough to call a skill: the holdout, which is
 not tuned, does not confirm it. Kept as an option, off by default.
+
+## 2026-09-21 -- second whole reference video recreated end to end (Blue Box, 82 shots, 2,805 frames)
+
+Same driver (training/recreate_video.py, rung 3/4, 6 tuning rounds), run by the new `youtube-recreation-queue` service
+(operate/README.md) after a VM reboot killed the first attempt at shot 8; it resumed from the rendered shots.
+
+| measure | Blue Box | Fragrant Flower (for comparison) |
+|---|---|---|
+| frame_score over all frames | 0.431 | 0.463 |
+| grad_ssim_holdout | 0.428 | 0.506 |
+| edge_f1 | 0.044 | 0.050 |
+| cut alignment F1 (benchmark/compare.py) | 0.869 | 0.941 |
+| motion-curve correlation | 0.901 | 0.954 |
+| brightness-curve correlation | 0.996 | 0.998 |
+| mean colour similarity | 0.968 | 0.976 |
+| video_score / audio_score / overall | 0.76 / 0.0 / 0.38 | 0.785 / 0.405 / 0.595 |
+| worst shots | S14 0.28, S80 0.28, S25 0.30, S2 0.31, S16 0.33 | |
+
+Timing, exposure and colour transfer to a second video; content still does not (backdrop + proxies), and edge_f1 is ~0.04
+on both -- line work is the largest missing component. audio_score 0.0 is a mix-level miss, not voices: the recreation
+mix measures -20.5 LUFS against the reference's 6.3 dB quieter level (lufs_db 6.3), while energy correlation is 0.815 and
+tempo matches (bpm_rel 0.007, half-time); key reads F major vs F minor. Next for audio: master to the reference's LUFS.
