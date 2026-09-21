@@ -257,6 +257,70 @@ def place_face_features(f, face_xywh, shape, aspect):
     set_flat_outline(f["mouth"], [(cx - mw / 2, my), (cx + mw / 2, my), (cx + mw / 2, my + 0.012), (cx - mw / 2, my + 0.012)], d, aspect)
 
 
+LINE_STROKES = {   # stroke layer (spec["line_strokes"]): counts and lengths in face-box units, tuned to the measured edge density
+    "n_bangs": 7, "bang_len": 0.45, "n_crown": 4, "n_locks": 2, "lock_len": 0.9, "collar": 1,
+}
+
+
+def set_strokes(o, strokes, width_frac, dist, aspect):
+    """Replace o's mesh with tapered ribbons, one per polyline in `strokes` [[(x, y) frame fractions]], `width_frac` of frame width
+    thick at the root and 30% of that at the tip -- the brush shape of anime ink lines."""
+    vw, vh = view_size_at(dist, aspect)
+    verts, faces = [], []
+    for pl in strokes:
+        pts = [(x, y / aspect) for x, y in pl]                  # x-fraction units in both axes so normals are true
+        base = len(verts)
+        for i, (px, py) in enumerate(pts):
+            ax, ay = pts[max(i - 1, 0)]
+            bx, by = pts[min(i + 1, len(pts) - 1)]
+            tx, ty = bx - ax, by - ay
+            n = math.hypot(tx, ty) or 1.0
+            nx, ny = -ty / n, tx / n
+            half = 0.5 * width_frac * (1.0 - 0.7 * i / max(len(pts) - 1, 1))
+            for sgn in (1, -1):
+                x, y = px + sgn * half * nx, (py + sgn * half * ny) * aspect
+                verts.append(((x - 0.5) * vw, dist - CAM_DIST, (0.5 - y) * vh))
+        faces += [[base + 2 * i, base + 2 * i + 1, base + 2 * i + 3, base + 2 * i + 2] for i in range(len(pts) - 1)]
+    m = o.data
+    m.clear_geometry()
+    m.from_pydata(verts, [], faces)
+    m.update()
+
+
+def stroke_paths(face_xywh, shape, lines):
+    """Polylines (frame fractions) of the parametric line art around a character: bangs strands over the forehead, crown strands
+    in the hair, side locks framing the face, neck and collar. Positions follow the face box and the proxy shape; nothing is
+    traced from the reference."""
+    x, y, w, h = face_xywh
+    s, L = {**DEFAULT_SHAPE, **(shape or {})}, {**LINE_STROKES, **(lines or {})}
+    cx = x + w / 2
+    head_top, hw = y + (s["head_cy"] - 0.5 * s["head_h"]) * h, 0.5 * s["head_w"] * w
+    hair_top, hair_hw = y + (s["hair_cy"] - 0.5 * s["hair_h"]) * h, 0.5 * s["hair_w"] * w
+    out = []
+    nb = max(int(round(L["n_bangs"])), 0)
+    for i in range(nb):
+        u = (i + 0.5) / nb - 0.5                                 # -0.5 .. 0.5 across the forehead
+        x0 = cx + 2 * u * hw
+        length = L["bang_len"] * h * (0.75 + 0.25 * ((i * 7) % 3) / 2)   # fixed uneven rhythm, no randomness
+        out.append([(x0 - 0.1 * u * w, head_top - 0.08 * h), (x0, head_top + 0.5 * length), (x0 + 0.12 * u * w, head_top + length)])
+    nc = max(int(round(L["n_crown"])), 0)
+    for i in range(nc):
+        u = (i + 0.5) / nc - 0.5
+        out.append([(cx + 0.2 * u * w, hair_top + 0.06 * h), (cx + 1.1 * u * hair_hw, hair_top + 0.25 * h), (cx + 1.6 * u * hair_hw, head_top + 0.02 * h)])
+    nl = max(int(round(L["n_locks"])), 0)
+    for sgn in (-1, 1):
+        for k in range(nl):
+            xs = cx + sgn * (hair_hw * (0.92 - 0.14 * k))
+            y0, y1 = y + (s["head_cy"] - 0.25) * h, y + (s["head_cy"] + L["lock_len"]) * h
+            out.append([(xs, y0), (xs + sgn * 0.04 * w, (y0 + y1) / 2), (xs + sgn * 0.02 * w, y1)])
+    if L["collar"] >= 0.5:
+        neck_y = y + s["body_top"] * h
+        for sgn in (-1, 1):
+            out.append([(cx + sgn * 0.14 * w, neck_y - 0.08 * h), (cx + sgn * 0.13 * w, neck_y + 0.12 * h)])
+            out.append([(cx + sgn * 0.3 * w, neck_y + 0.1 * h), (cx + sgn * 0.12 * w, neck_y + 0.3 * h), (cx, neck_y + 0.5 * h)])
+    return out
+
+
 def place_character(parts, face_xywh, shape, aspect, outline=None):
     """Anime face boxes span brows to chin: hair extends above, the body starts below the chin."""
     x, y, w, h = face_xywh
@@ -322,6 +386,11 @@ def build_scene(sc, spec, width, height):
         subject = build_character(ch, spec.get("character_style", "ellipsoid"))
         if spec.get("face_features"):
             subject["_features"] = build_face_features(ch)
+        la = spec.get("line_art")
+        if spec.get("line_strokes") and la and isinstance(la.get("ink_rgb"), list) and isinstance(la.get("stroke_width_frac"), (int, float)):
+            subject["_strokes"] = make_flat("strokes", la["ink_rgb"])
+            if isinstance(ch.get("hair_rgb"), list):                     # strands lie on a fringe of hair, not on bare skin
+                subject["_fringe"] = make_flat("fringe", ch["hair_rgb"])
     elif spec.get("subject_bbox_xywh") and spec.get("subject_rgb"):
         x, y, w, h = spec["subject_bbox_xywh"]
         subject = screen_ellipsoid("subject", x + w / 2, y + h / 2, w, h, CAM_DIST - SUBJECT_DEPTH, aspect, spec["subject_rgb"], depth_ratio=0.6)
@@ -384,6 +453,15 @@ def apply_candidate(sc, obj, spec, p):
         place_character(obj["character"], spec["subject_bbox_xywh"], p.get("shape"), obj["aspect"], spec.get("outline"))
         if "_features" in obj["character"]:
             place_face_features(obj["character"]["_features"], spec["subject_bbox_xywh"], p.get("shape"), obj["aspect"])
+        if "_fringe" in obj["character"]:
+            x, y, w, h = spec["subject_bbox_xywh"]
+            s = {**DEFAULT_SHAPE, **(p.get("shape") or {})}
+            L = {**LINE_STROKES, **(p.get("lines") or {})}
+            set_flat_outline(obj["character"]["_fringe"], bangs_outline(x + w / 2, y + (s["head_cy"] - 0.5 * s["head_h"]) * h + 0.02 * h, s["head_w"] * w * 1.05,
+                                                                        L["bang_len"] * h * 0.9), CAM_DIST - SUBJECT_DEPTH - 0.95, obj["aspect"])
+        if "_strokes" in obj["character"]:
+            set_strokes(obj["character"]["_strokes"], stroke_paths(spec["subject_bbox_xywh"], p.get("shape"), p.get("lines")),
+                        spec["line_art"]["stroke_width_frac"], CAM_DIST - SUBJECT_DEPTH - 1.0, obj["aspect"])
 
 
 def key_animation(sc, obj, spec, p):

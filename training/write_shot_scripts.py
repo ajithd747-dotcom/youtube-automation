@@ -473,6 +473,8 @@ def main():
     (D_ / "sheets").mkdir(exist_ok=True)
     ol_path = D_ / "character_outlines.json"     # training/measure_character_outlines.py
     outlines = json.loads(ol_path.read_text(encoding="utf-8")) if ol_path.exists() else None
+    la_path = D_ / "line_art.json"           # training/measure_line_art.py
+    line_art = json.loads(la_path.read_text(encoding="utf-8")) if la_path.exists() else None
     sem_path = D_ / "semantic.json"          # vision pass (frame-script-standard step 3), kept apart so a rebuild never wipes it
     semantic = json.loads(sem_path.read_text(encoding="utf-8")) if sem_path.exists() else None
     grid_path = D_ / "colour_grid32x18.npy"
@@ -492,6 +494,13 @@ def main():
         if outlines and str(i) in outlines["shots"]:
             script["characters"]["silhouette_outline"] = {"keyframes": outlines["shots"][str(i)], "measured_on": f"{outlines['model']} foreground > {outlines['threshold']}, largest region, <= 40 points",
                                                           "units": outlines["units"]}
+        if line_art and str(i) in line_art["shots"] and line_art["shots"][str(i)]["keyframes"]:
+            la = line_art["shots"][str(i)]
+            script["characters"]["line_art"] = {**{k: v for k, v in la.items() if k != "keyframes"}, "keyframes": la["keyframes"],
+                                                "measured_on": f"{line_art['measured_by']}: Canny {line_art['canny']} inside/outside the measured outline",
+                                                "units": line_art["units"]}
+        else:
+            script["characters"]["line_art"] = NM
         if semantic and str(i) in semantic["shots"]:
             script["semantic"] = {**semantic["shots"][str(i)], "filled_by": semantic["filled_by"]}
         ch, co = script["characters"], script["composition"]

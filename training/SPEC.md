@@ -71,7 +71,9 @@ camera path with move type and easing; lighting rig (key azimuth/elevation, key:
 rim/backlight, bloom, vignette, exposure keyframes, flicker); physics (particle systems with type/size/speed/direction,
 gravity vector, wind vector, turbulence, sway frequency and amplitude, shake profile, impact frames); subject motion
 and cadence; composition and depth-of-field plan; palette and grade; transitions in/out; audio (loudness curve, beats,
-speech spans with the Whisper text); characters per frame; `semantic` (setting, characters, actions, mood) which stays
+speech spans with the Whisper text); characters per frame, their measured silhouette outline and `characters.line_art`
+(edge density inside/outside the outline, ink colour, stroke width, vertical share of hair strokes -- summary statistics,
+never line positions); `semantic` (setting, characters, actions, mood) which stays
 `NOT MEASURED` until a vision pass fills it; and `blender_directives` -- concrete Blender settings derived from the above
 (light energies/colours/angles, camera keyframes, particle emitter settings, world colour, compositor glare/vignette/
 colour balance, DoF), each with `source_metric` and `confidence`.
@@ -85,6 +87,7 @@ training/
   describe_audio.py        Layer A audio per frame
   detect_anime_faces.py    characters per frame (OpenCV 4 in tools/cv4; cascade in tools/models)
   write_shot_scripts.py    Layer B: one script per shot + contact sheet for the vision pass
+  measure_line_art.py      characters.line_art per shot (merged by write_shot_scripts.py)
   check_script_completeness.py   audit: groups present, no placeholders, every Blender directive sourced
   check_standard_wiring.py fails if the standard is unwired from CLAUDE.md / skill / agent / Blender agent
   score_recreation.py      per-frame scoring + worst-frame montage

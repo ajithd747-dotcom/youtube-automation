@@ -215,3 +215,27 @@ Timing, exposure and colour transfer to a second video; content still does not (
 on both -- line work is the largest missing component. audio_score 0.0 is a mix-level miss, not voices: the recreation
 mix measures -20.5 LUFS against the reference's 6.3 dB quieter level (lufs_db 6.3), while energy correlation is 0.815 and
 tempo matches (bpm_rel 0.007, half-time); key reads F major vs F minor. Next for audio: master to the reference's LUFS.
+
+## 2026-09-21 -- rung 6: parametric line art on the character proxy -- negative, kept off by default
+
+Where edge_f1 is lost (FF 27 / 50, tuned rung-5 renders): 89% / 93% of the reference's edges lie inside the character
+outline; the render recalls 30% / 15% of them. The missing ink is interior line work (hair strands, jaw, collar, eyes).
+
+New measured script field `characters.line_art` (training/measure_line_art.py, merged by write_shot_scripts.py): edge
+density inside/outside the outline, an 8x8 density grid over the outline's box, ink colour, stroke width, vertical share of
+hair strokes -- statistics, never line positions. FF 27: inside 0.060 vs outside 0.011, ink [68,56,55], ~2 px strokes.
+Blender: `blender_level3.stroke_paths` -- tapered ink ribbons (bangs strands over a hair fringe, crown strands, side locks,
+neck, collar) placed from the face box and proxy shape, in the measured ink colour and width. training/tune_line_art.py
+tunes the 6 count/length parameters to the measured line art; frame_score / holdout are never used to accept a step.
+
+| shot | no strokes: frame_score / edge_f1 / holdout | objective = one density | objective = 8x8 grid |
+|---|---|---|---|
+| FF 27 | 0.560 / 0.261 / 0.513 | 0.539 / 0.272 / 0.488 | 0.535 / 0.262 / 0.500 |
+| FF 50 | 0.444 / 0.116 / 0.394 | 0.448 / 0.201 / 0.366 | 0.450 / 0.200 / 0.369 |
+
+The holdout falls in all four runs, and ssim falls 0.04-0.05 each time. With one density number the tuner met the target by
+hanging a curtain of side locks over the jacket (n_locks at its limit); the grid objective stopped that on 27 but its error
+only fell 0.88 -> 0.73: generic strand templates cannot put ink where THIS character's ink is (on 27 it sits left of the
+face box, over the hair fall). Same lesson as rung 2 in reverse: lines in roughly-right places cost ssim and structure more
+than they earn in edge_f1. What would move it is measured structure -- where the eyes, jaw, hairline and hair masses are --
+not more strokes. Stroke layer stays in the code, off unless spec["line_strokes"].

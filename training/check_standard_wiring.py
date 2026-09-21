@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "blender_agent"))
 GROUPS = ["lighting", "motion", "physics", "composition", "colour", "transitions", "audio", "characters"]
 PIPELINE_FILES = ["ingest_reference.py", "describe_frames.py", "describe_audio.py", "detect_anime_faces.py", "write_shot_scripts.py",
-                  "check_script_completeness.py", "score_recreation.py", "calibrate_scores.py", "measure_colour_grid.py", "measure_lines.py",
+                  "check_script_completeness.py", "score_recreation.py", "calibrate_scores.py", "measure_colour_grid.py", "measure_lines.py", "measure_line_art.py",
                   "blender_layout_common.py", "blender_level1.py", "blender_level2.py", "recreate_level1.py", "recreate_level2.py"]
 problems = []
 
