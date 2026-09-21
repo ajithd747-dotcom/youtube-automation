@@ -3,3 +3,4 @@
 # (marker in training/runs/queue_done/). Add a line to queue a new job; it runs after the ones above it.
 video_bluebox blue-box --rounds 6
 video_fragrant_v2 fragrant --rounds 6 --out video_v2
+video_fragrant_measured fragrant --rounds 6 --out video_measured --look measured
