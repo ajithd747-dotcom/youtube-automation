@@ -317,3 +317,22 @@ The subject change is a wash on the picture: 40 shots moved, all of them outline
 (S11, S26, S33), losses down to -0.10 (S38, S32, S34, S14, mostly the blond boy the cascade cannot see). The overall jump
 is the audio mastering. Scripts are now rebuilt with the landmark box ahead of the outline guess: the face-box source for
 the 63 shots is now face_landmarks 27, face_track 14, silhouette_outline 3, saliency 2, none 17.
+
+## 2026-09-21 -- landmark face, third shot (FF 32, blond boy): NOT confirmed
+
+S32 had no character before (the cascade found no face); the landmark box now gives it one.
+
+| FF 32 | frame_score | holdout |
+|---|---|---|
+| no character (rung 3) | 0.568 | 0.609 |
+| rung 4 ellipsoid, lights tuned | 0.528 | 0.587 |
+| rung 5 ellipsoid, shape tuned | 0.587 | 0.543 |
+| landmark face, default shape | 0.552 | 0.569 |
+| landmark face, shape tuned | 0.622 | 0.511 |
+
+Every character variant has a lower holdout than no character at all, and shape tuning lowers it further on both styles
+(hist 0.64 -> 0.89 while the hair ellipsoid grows to fill the close-up: frame_score fitting the colour histogram). Seen in
+the renders: the landmark face is placed right (eyes, brows, mouth on the measured points) but clips to white -- the flat
+face plane sits nearer the key light than the ellipsoid the lights were tuned with. So `landmark-placed-anime-face` stays
+unconfirmed. Fix being tried: draw the landmark face as emission in the measured colours, divided by the frame's exposure,
+so it displays at the measured colour whatever the lighting.
