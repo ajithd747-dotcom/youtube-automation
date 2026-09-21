@@ -96,3 +96,54 @@ def interpolate_points(keys, frame):
             t = (frame - k0["frame"]) / max(k1["frame"] - k0["frame"], 1)
             return [[a[0] + t * (b[0] - a[0]), a[1] + t * (b[1] - a[1]), min(a[2], b[2])] for a, b in zip(k0["points"], k1["points"])]
     return keys[-1]["points"]
+
+
+def hair_region(outline, P):
+    """Hair as seen: the measured character outline above the chin (landmark 2). The face is drawn in front of it."""
+    return clip_half_plane([tuple(p) for p in outline], 0.0, -1.0, -P[2][1])
+
+
+def point_in_polygon(x, y, poly):
+    inside = False
+    for i, (x1, y1) in enumerate(poly):
+        x0, y0 = poly[i - 1]
+        if (y0 > y) != (y1 > y) and x < x0 + (y - y0) * (x1 - x0) / (y1 - y0):
+            inside = not inside
+    return inside
+
+
+def hair_locks(hair, P, n, aspect):
+    """Split the hair region into n locks fanning out from a crown point above the face: wedges between rays from the
+    crown, each clipped to the hair polygon, plus the ray segments inside the hair (the ink lines between locks, drawn from
+    35% of the way out, where anime strand lines start). Angles are taken in pixel space (y / aspect).
+    Returns (wedges [[(x, y)]], rays [[(x, y), (x, y)]])."""
+    if len(hair) < 3 or n < 2:
+        return [], []
+    brow_y = min(p[1] for p in P[5:11])
+    top_y = min(p[1] for p in hair)
+    cx = (P[0][0] + P[4][0]) / 2
+    cy = top_y + 0.25 * (brow_y - top_y)
+    ang = lambda x, y: math.atan2((y - cy) / aspect, x - cx)
+    angles = sorted(ang(x, y) for x, y in hair)
+    gaps = [(angles[(i + 1) % len(angles)] - a) % (2 * math.pi) for i, a in enumerate(angles)]
+    k = max(range(len(gaps)), key=lambda i: gaps[i])              # the span starts after the widest empty gap
+    a0 = angles[(k + 1) % len(angles)]
+    span = (2 * math.pi - gaps[k]) if len(angles) > 1 else 0.0
+    bounds = [a0 + span * i / n for i in range(n + 1)]
+    wedges, rays = [], []
+    for t0, t1 in zip(bounds, bounds[1:]):
+        d0 = (math.cos(t0), math.sin(t0) * aspect)
+        d1 = (math.cos(t1), math.sin(t1) * aspect)
+        w = clip_half_plane(hair, -d0[1], d0[0], -d0[1] * cx + d0[0] * cy)
+        w = clip_half_plane(w, d1[1], -d1[0], d1[1] * cx - d1[0] * cy) if len(w) >= 3 else []
+        wedges.append(w)
+    for t in bounds[1:-1]:
+        dx, dy = math.cos(t), math.sin(t) * aspect
+        reach = 0.0
+        for s in range(1, 200):
+            r = s / 200 * 1.5
+            if point_in_polygon(cx + dx * r, cy + dy * r, hair):
+                reach = r
+        if reach > 0:
+            rays.append([(cx + dx * reach * 0.35, cy + dy * reach * 0.35), (cx + dx * reach, cy + dy * reach)])
+    return wedges, rays

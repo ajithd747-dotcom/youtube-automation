@@ -8,7 +8,8 @@ box and 28 points in frame fractions of the content area, each with the model's 
 0-4 face contour (0 = image-left temple, 2 = chin, 4 = image-right temple), 5-7 / 8-10 brows (image-left / image-right),
 11-16 / 17-22 eyes (image-left / image-right; six points around each eye opening), 23 nose, 24-27 mouth -- read off the
 drawn landmarks on FF shots 27, 50, 32. Consumers use hulls of the eye/mouth groups, not the order inside a group.
-Per face also `tones` (measure_face_tones): skin colour, and the colour, share and side of the darker tone (shadow or bangs). A frame without a detection above MIN_SCORE is NOT MEASURED.
+Per face also `hair_tones` (measure_hair_tones: light/dark hair colour and dark share inside the measured outline above
+the chin, minus the face) and `tones` (measure_face_tones): skin colour, and the colour, share and side of the darker tone (shadow or bangs). A frame without a detection above MIN_SCORE is NOT MEASURED.
 Writes training/reference/<slug>/face_landmarks.json, merged into the shot script by write_shot_scripts.py as
 characters.face_landmarks.
 """
@@ -24,7 +25,7 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
-from face_geometry import eye_hulls, face_outline, mouth_hull  # noqa: E402
+from face_geometry import eye_hulls, face_outline, hair_region, mouth_hull  # noqa: E402
 os.environ.setdefault("HF_HOME", str(ROOT / "tools" / "hf"))
 MODEL = "hysts/anime-face-detector 0.1.0 (yolov3 + hrnetv2 28 points)"
 MIN_SCORE = 0.5
@@ -78,6 +79,32 @@ def measure_face_tones(bgr, points):
             "dark_direction_deg": round(ang, 1)}
 
 
+def measure_hair_tones(bgr, points, outline):
+    """Two LAB tones of the hair: inside face_geometry.hair_region (measured outline above the chin) minus the face.
+    light_rgb, dark_rgb, dark_share. NOT MEASURED without an outline or with < 50 hair pixels."""
+    nm = {"light_rgb": NM, "dark_rgb": NM, "dark_share": NM}
+    if not isinstance(outline, list):
+        return nm
+    h, w = bgr.shape[:2]
+    px = lambda poly: np.int32([[x * w, y * h] for x, y in poly])
+    region = hair_region(outline, points)
+    if len(region) < 3:
+        return nm
+    hair = np.zeros((h, w), np.uint8)
+    cv2.fillPoly(hair, [px(region)], 1)
+    cv2.fillPoly(hair, [px(face_outline(points))], 0)
+    m = hair > 0
+    if m.sum() < 50:
+        return nm
+    lab = cv2.cvtColor(bgr, cv2.COLOR_BGR2LAB)[m].astype(np.float32)
+    _, idx, centres = cv2.kmeans(lab, 2, None, (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 20, 0.5), 3, cv2.KMEANS_PP_CENTERS)
+    idx = idx.ravel()
+    light = int(np.argmax(centres[:, 0]))
+    rgb = bgr[m][:, ::-1]
+    return {"light_rgb": [int(v) for v in np.median(rgb[idx == light], axis=0)], "dark_rgb": [int(v) for v in np.median(rgb[idx != light], axis=0)],
+            "dark_share": round(float((idx != light).mean()), 3)}
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("slug")
@@ -95,6 +122,8 @@ def main():
     out = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"shots": {}}
     out.update({"model": MODEL, "min_score": MIN_SCORE, "units": "frame fractions (x right, y down), content area; point = [x, y, confidence]"})
     detector = create_detector("yolov3", device="cpu")
+    ol_path = D / "character_outlines.json"
+    outlines = json.loads(ol_path.read_text(encoding="utf-8"))["shots"] if ol_path.exists() else {}
     for s in shots:
         if wanted and s["idx"] not in wanted:
             continue
@@ -104,6 +133,8 @@ def main():
             face = measure_face_of_frame(detector, im)
             if face:
                 face["tones"] = measure_face_tones(im, face["points"])
+                ol = next((k["polygon"] for k in outlines.get(str(s["idx"]), []) if k["frame"] == f - s["start"]), None)
+                face["hair_tones"] = measure_hair_tones(im, face["points"], ol)
             entry.append({"frame": f - s["start"], **(face or {"bbox_xywh": NM, "points": NM})})
         out["shots"][str(s["idx"])] = entry
         print(f"shot {s['idx']}: " + " ".join(f"{e.get('score', '--')}" for e in entry), flush=True)

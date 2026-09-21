@@ -396,3 +396,27 @@ reference has plenty. The holdout rewards matching the gradient distribution, no
 Stays off by default. What the numbers point at: the proxies need interior detail that follows the measured
 characters.line_art density (dense in hair, sparse on skin) -- rung 6 tried generic strokes and lost; the difference now
 would be placing hair masses from the landmarks/outline, not strands from templates.
+
+## 2026-09-21 -- rung 7: hair as measured masses -- negative on the holdout (all three shots)
+
+New measurement `hair_tones` per face (measure_face_landmarks.py: two LAB tones inside the measured outline above the chin,
+minus the face). Blender (`hair_masses`): the hair ellipsoid is replaced by the measured outline above the chin in the
+majority tone, split into locks fanning from a crown point (face_geometry.hair_locks), the minority tone on its measured
+share of the locks, ink along the lock boundaries. training/tune_hair_masses.py picks the lock count whose rendered line-art
+grid is closest to characters.line_art (frame_score / holdout never used to choose). The renders visibly take each
+character's own hair shape (27 spiky, 50 long side locks, 32 short blond spikes).
+
+| shot | landmark face + ellipsoid hair: frame_score / edge_f1 / holdout | hair masses | locks chosen |
+|---|---|---|---|
+| FF 27 | 0.579 / 0.298 / 0.508 | 0.489 / 0.295 / 0.475 | 10 |
+| FF 50 | 0.481 / 0.164 / 0.395 | 0.515 / 0.201 / 0.361 | 8 |
+| FF 32 | 0.587 / 0.214 / 0.569 | 0.652 / 0.337 / 0.536 | 16 |
+
+Holdout -0.033 / -0.034 / -0.033. The render's line density stays at a third of the reference's (0.022 vs 0.060 on 27)
+at every lock count, so the grid objective is choosing among uniformly wrong options.
+
+Pattern over rungs 4-7 (colours, silhouettes, outline fit, parametric eyes, line art, flat fills, hair masses): the only
+content change that raised the holdout on more than one shot is the landmark face -- structure placed on MEASURED points.
+Anything placed plausibly but not measured (templates, wedges, strokes, tuned ellipsoids) lowers it, by 0.01-0.05, even
+when it looks closer to the reference. grad_ssim_holdout is an unforgiving judge: SSIM on gradient maps blurred at sigma
+1.2 px, so an edge a few pixels off counts as a missing edge AND a false one. Off by default.

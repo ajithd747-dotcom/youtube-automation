@@ -97,7 +97,7 @@ def build_scene_spec(script):
         "line_art": script["characters"].get("line_art") if isinstance(script["characters"].get("line_art"), dict) else None,
         # measured facial landmarks per keyframe (28 points, frame fractions, + face tones): place and animate the face when
         # face_from_landmarks; "landmarks" = the keyframe nearest the middle, for the static uses
-        "landmark_keys": sorted(({"frame": k["frame"], "points": k["points"], "tones": k.get("tones")} for k in script["characters"]["face_landmarks"]["keyframes"]),
+        "landmark_keys": sorted(({"frame": k["frame"], "points": k["points"], "tones": k.get("tones"), "hair_tones": k.get("hair_tones")} for k in script["characters"]["face_landmarks"]["keyframes"]),
                                 key=lambda k: k["frame"]) if isinstance(script["characters"].get("face_landmarks"), dict) else None,
         "landmarks": next((k["points"] for k in sorted(script["characters"]["face_landmarks"]["keyframes"], key=lambda k: abs(k["frame"] - n // 2))),
                           None) if isinstance(script["characters"].get("face_landmarks"), dict) else None,

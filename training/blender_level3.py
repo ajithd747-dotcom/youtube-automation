@@ -23,7 +23,7 @@ import bpy
 from mathutils import Vector
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from face_geometry import eye_hulls, face_outline, interpolate_points, mouth_hull, shadow_polygon  # noqa: E402
+from face_geometry import eye_hulls, face_outline, hair_locks, hair_region, interpolate_points, mouth_hull, shadow_polygon  # noqa: E402
 
 CAM_DIST = 10.0
 LENS_MM, SENSOR_MM = 50.0, 36.0
@@ -406,6 +406,53 @@ def place_landmark_face_at(obj, spec, frame):
     place_landmark_face(obj["character"]["_landmark_face"], interpolate_points(keys, frame), w, obj["aspect"], tones)
 
 
+def set_flat_polygons(o, polys, dist, aspect):
+    """Replace o's mesh with several flat n-gons (screen points, frame fractions), `dist` from the camera."""
+    vw, vh = view_size_at(dist, aspect)
+    verts, faces = [], []
+    for poly in polys:
+        if len(poly) < 3:
+            continue
+        faces.append(list(range(len(verts), len(verts) + len(poly))))
+        verts += [((x - 0.5) * vw, dist - CAM_DIST, (0.5 - y) * vh) for x, y in poly]
+    m = o.data
+    m.clear_geometry()
+    m.from_pydata(verts, [], faces)
+    m.update()
+
+
+def hair_tones(keys):
+    """(base_rgb, accent_rgb, accent_share) from the measured hair tones of the keyframe nearest the middle: the majority tone
+    fills the hair, the other goes on that share of the locks. None when not measured."""
+    measured = [k["hair_tones"] for k in keys or [] if isinstance((k.get("hair_tones") or {}).get("dark_share"), (int, float))]
+    if not measured:
+        return None
+    t = measured[len(measured) // 2]
+    if t["dark_share"] >= 0.5:
+        return t["dark_rgb"], t["light_rgb"], 1.0 - t["dark_share"]
+    return t["light_rgb"], t["dark_rgb"], t["dark_share"]
+
+
+def build_hair_masses(tones, ink_rgb):
+    base, accent, _ = tones
+    return {"base": make_measured_flat("hair_base", base), "accent": make_measured_flat("hair_accent", accent),
+            "ink": make_measured_flat("hair_ink", ink_rgb)}
+
+
+def place_hair_masses(hm, outline, pts, n_locks, accent_share, width_frac, aspect):
+    """Hair = measured outline above the chin in the base tone; n_locks wedges from a crown point (face_geometry.hair_locks),
+    round(accent_share * n) of them, evenly spaced, in the accent tone; ink along the lock boundaries. Between the body and the
+    landmark face in depth."""
+    d = CAM_DIST - SUBJECT_DEPTH - 1.3
+    region = hair_region(outline, pts)
+    wedges, rays = hair_locks(region, pts, int(round(n_locks)), aspect)
+    k = int(round(accent_share * len(wedges)))
+    pick = sorted({int((i + 0.5) * len(wedges) / k) for i in range(k)}) if k else []
+    set_flat_polygons(hm["base"], [region], d, aspect)
+    set_flat_polygons(hm["accent"], [wedges[i] for i in pick if i < len(wedges)], d - 0.02, aspect)
+    set_strokes(hm["ink"], rays, width_frac, d - 0.04, aspect)
+
+
 def place_character(parts, face_xywh, shape, aspect, outline=None):
     """Anime face boxes span brows to chin: hair extends above, the body starts below the chin."""
     x, y, w, h = face_xywh
@@ -477,6 +524,12 @@ def build_scene(sc, spec, width, height):
                                                             face_tones(spec.get("landmark_keys")))
             if "head" in subject:                                   # the measured face replaces the head ellipsoid
                 bpy.data.objects.remove(subject.pop("head"))
+        ht = hair_tones(spec.get("landmark_keys"))
+        if spec.get("hair_masses") and ht and spec.get("outline") and spec.get("landmarks"):
+            la0 = spec.get("line_art") or {}
+            subject["_hair_masses"] = build_hair_masses(ht, la0["ink_rgb"] if isinstance(la0.get("ink_rgb"), list) else LINE_DARK)
+            if "hair" in subject:                                   # the measured hair region replaces the hair ellipsoid
+                bpy.data.objects.remove(subject.pop("hair"))
         la = spec.get("line_art")
         if spec.get("line_strokes") and la and isinstance(la.get("ink_rgb"), list) and isinstance(la.get("stroke_width_frac"), (int, float)):
             subject["_strokes"] = make_flat("strokes", la["ink_rgb"])
@@ -546,6 +599,11 @@ def apply_candidate(sc, obj, spec, p):
             place_face_features(obj["character"]["_features"], spec["subject_bbox_xywh"], p.get("shape"), obj["aspect"])
         if "_landmark_face" in obj["character"]:
             place_landmark_face_at(obj, spec, 0)
+        if "_hair_masses" in obj["character"]:
+            la0 = spec.get("line_art") or {}
+            place_hair_masses(obj["character"]["_hair_masses"], spec["outline"], spec["landmarks"], p.get("hair_locks", 8),
+                              hair_tones(spec["landmark_keys"])[2], la0["stroke_width_frac"] if isinstance(la0.get("stroke_width_frac"), (int, float)) else 0.003,
+                              obj["aspect"])
         if "_fringe" in obj["character"]:
             x, y, w, h = spec["subject_bbox_xywh"]
             s = {**DEFAULT_SHAPE, **(p.get("shape") or {})}
