@@ -90,6 +90,9 @@ def build_scene_spec(script):
         # rung 4: the vision pass says who is on screen; only then does the face box become a character (colours measured)
         "character": reg.get("character") if isinstance(reg.get("character"), dict) and isinstance(script.get("semantic", {}).get("characters"), list)
                      and script["semantic"]["characters"] else None,
+        # measured silhouette (middle keyframe) when the segmentation found a character
+        "outline": next((k["polygon"] for k in sorted(script["characters"].get("silhouette_outline", {}).get("keyframes", []), key=lambda k: abs(k["frame"] - n // 2))
+                         if isinstance(k["polygon"], list)), None),
         "camera_keys": keys,
         "exposure_keys": [{"frame": int(e["frame"]), "luma": float(e["luma"])} for e in exp] or [{"frame": 0, "luma": float(li["exposure_luma"]["median"])}],
         "targets": {name: dig(script, path) for name, (path, _) in FEATURES.items()},

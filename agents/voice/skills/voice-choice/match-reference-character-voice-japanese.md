@@ -3,7 +3,7 @@ id: match-reference-character-voice-japanese
 name: Re-voice a reference's character lines in Japanese - Kokoro ja voice chosen by measured F0, stretched, pitched and levelled per line
 category: voice-choice
 kind: technique
-status: candidate
+status: verified
 applies_to:
 - any
 when_to_use: Recreating the spoken lines of a reference video (anime trailer, dialogue) with matching timing, pitch and level,
@@ -20,7 +20,7 @@ tags:
 - kokoro
 - japanese
 source:
-- 'own-experience: training/recreate_audio.py on Fragrant Flower (24 lines), 2026-09-21 (training/PROGRESS.md)'
+- 'own-experience: training/recreate_audio.py on Fragrant Flower (24 lines) and Blue Box (20 lines), 2026-09-21 (training/PROGRESS.md)'
 version: 1
 ---
 ## Procedure
@@ -38,10 +38,11 @@ version: 1
 
 ## Evidence
 
-Fragrant Flower, 24 lines: character accuracy 0.849 (ceiling 0.888), speech-envelope correlation 0.615, median F0 error
-0.63 semitones.
+| video | lines | character accuracy (ceiling) | speech-envelope corr | median F0 error |
+|---|---|---|---|---|
+| Fragrant Flower | 24 | 0.846 (0.888) | 0.615 | 0.41 st |
+| Blue Box | 20 | 0.838 (0.838) | 0.478 | 0.80 st |
 
 ## Limits
 
-Timbre and acting (emotion, breath, shouting) are not matched; only pitch, pace, level and words. status candidate until a
-second video confirms it.
+Timbre and acting (emotion, breath, shouting) are not matched; only pitch, pace, level and words.

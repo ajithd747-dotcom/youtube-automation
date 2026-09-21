@@ -459,6 +459,8 @@ def main():
     transcript = json.loads(tr_path.read_text(encoding="utf-8")) if tr_path.exists() else None
     (D_ / "shots").mkdir(exist_ok=True)
     (D_ / "sheets").mkdir(exist_ok=True)
+    ol_path = D_ / "character_outlines.json"     # training/measure_character_outlines.py
+    outlines = json.loads(ol_path.read_text(encoding="utf-8")) if ol_path.exists() else None
     sem_path = D_ / "semantic.json"          # vision pass (frame-script-standard step 3), kept apart so a rebuild never wipes it
     semantic = json.loads(sem_path.read_text(encoding="utf-8")) if sem_path.exists() else None
     grid_path = D_ / "colour_grid32x18.npy"
@@ -484,6 +486,9 @@ def main():
         else:
             box, src = None, None
         script["colour"]["regions"] = colour_regions_section(grid32[sh["start"]:sh["end"]] if grid32 is not None else None, box, src)
+        if outlines and str(i) in outlines["shots"]:
+            script["characters"]["silhouette_outline"] = {"keyframes": outlines["shots"][str(i)], "measured_on": f"{outlines['model']} foreground > {outlines['threshold']}, largest region, <= 40 points",
+                                                          "units": outlines["units"]}
         if semantic and str(i) in semantic["shots"]:
             script["semantic"] = {**semantic["shots"][str(i)], "filled_by": semantic["filled_by"]}
         script["blender_directives"] = blender_directives(script)

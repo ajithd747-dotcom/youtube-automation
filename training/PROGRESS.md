@@ -143,3 +143,20 @@ Found and fixed: the music agent's minor progression i-VI-III-VII was HEARD as t
 measured); now i-iv-VII-i, which measures as the planned key for D and A minor alone. In the full trailer render the key still
 reads C major after impacts and mastering, so key_match stays False -- the whole-track chroma key detector is fragile.
 Skill: `match-reference-character-voice-japanese` (candidate).
+
+## 2026-09-21 -- measured outline, cel shading, and the voice skill confirmed
+
+Measured character outline (training/measure_character_outlines.py: skytnt/anime-seg ISNet ONNX, 3 keyframes per shot,
+<= 40-point polygon, NOT MEASURED when foreground < 1% -- wide shots with small figures) drawn as a flat body/hair outline:
+
+| shot | ellipsoid tuned | measured outline tuned | cel (flat emission, measured colours) |
+|---|---|---|---|
+| FF 27 | 0.560 / 0.513 | 0.541 / 0.506 | 0.436 / 0.495 |
+| FF 50 | 0.444 / 0.394 | 0.452 / 0.383 | 0.381 / 0.350 |
+
+(frame_score / holdout.) All three shape families sit within ~0.01: the silhouette is not the bottleneck. Cel shading
+collapses `hist` (0.65 -> 0.32): four flat median colours cannot match the broad tone distribution of a real anime frame.
+Looking at the renders: what is missing is interior detail -- line art, eyes, hair strands. Lit stays the default.
+
+Voice skill confirmed on Blue Box: character accuracy 0.838 = the Whisper ceiling on the reference vocals (0.838); music key
+matched there. `match-reference-character-voice-japanese` -> verified.

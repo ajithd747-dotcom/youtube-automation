@@ -56,11 +56,34 @@ def setup_render(width, height, samples):
     return sc
 
 
+SHADING = {"mode": "lit"}      # "cel": flat emission at the measured colour, the anime look; set from spec["shading"]
+
+
 def diffuse_material(name, colour_lin=None, ramp=None):
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
     nt = mat.node_tree
     bsdf = nt.nodes["Principled BSDF"]
+    if SHADING["mode"] == "cel":
+        emit = nt.nodes.new("ShaderNodeEmission")
+        nt.links.new(emit.outputs["Emission"], nt.nodes["Material Output"].inputs["Surface"])
+        bsdf = emit                                            # colour sockets below go to the emission node
+        bsdf.inputs["Strength"].default_value = 1.0
+        if ramp is None:
+            bsdf.inputs["Color"].default_value = (*colour_lin, 1.0)
+            return mat, bsdf, None
+        tc = nt.nodes.new("ShaderNodeTexCoord")
+        sep = nt.nodes.new("ShaderNodeSeparateXYZ")
+        cr = nt.nodes.new("ShaderNodeValToRGB")
+        nt.links.new(tc.outputs["Generated"], sep.inputs[0])
+        nt.links.new(sep.outputs["Y"], cr.inputs["Fac"])
+        nt.links.new(cr.outputs["Color"], bsdf.inputs["Color"])
+        els = cr.color_ramp.elements
+        while len(els) < len(ramp):
+            els.new(0.5)
+        for el, (pos, col) in zip(els, ramp):
+            el.position, el.color = pos, (*col, 1.0)
+        return mat, bsdf, cr
     bsdf.inputs["Roughness"].default_value = 1.0
     bsdf.inputs["Specular IOR Level"].default_value = 0.0
     if ramp is None:
@@ -159,6 +182,20 @@ def screen_ellipsoid(name, cx, cy, sw, sh, dist, aspect, rgb, depth_ratio=0.6):
     return o
 
 
+def clip_above(pts, y_cut):
+    """Sutherland-Hodgman clip of polygon pts to the half-plane y <= y_cut (screen y grows downward)."""
+    out = []
+    for i, (x1, y1) in enumerate(pts):
+        x0, y0 = pts[i - 1]
+        in0, in1 = y0 <= y_cut, y1 <= y_cut
+        if in0 != in1:
+            t = (y_cut - y0) / (y1 - y0)
+            out.append((x0 + t * (x1 - x0), y_cut))
+        if in1:
+            out.append((x1, y1))
+    return out
+
+
 def build_character(ch, style="ellipsoid"):
     """Character proxy from the semantic pass + measured colours: body (behind), hair (behind the head), head (front);
     the silhouette style adds bangs in front of the head and uses flat outlines for hair and body."""
@@ -168,17 +205,34 @@ def build_character(ch, style="ellipsoid"):
         if not isinstance(rgb, list):
             continue
         parts[k] = make_flat(k, rgb) if (style == "silhouette" and k != "head") else make_ellipsoid(k, rgb)
+    if style == "outline":
+        # measured silhouette: whole outline in the body colour, the part above the chin in the hair colour, head in front
+        for k in ("body", "hair"):
+            if k in parts:
+                bpy.data.objects.remove(parts.pop(k))
+        parts["outline_body"] = make_flat("outline_body", col["body"] if isinstance(col["body"], list) else col["hair"])
+        if isinstance(col["hair"], list):
+            parts["outline_hair"] = make_flat("outline_hair", col["hair"])
     if style == "silhouette" and isinstance(col["hair"], list):
         parts["bangs"] = make_flat("bangs", col["hair"])
     parts["_style"] = style
     return parts
 
 
-def place_character(parts, face_xywh, shape, aspect):
+def place_character(parts, face_xywh, shape, aspect, outline=None):
     """Anime face boxes span brows to chin: hair extends above, the body starts below the chin."""
     x, y, w, h = face_xywh
     s = {**DEFAULT_SHAPE, **(shape or {})}
     cx, d_head = x + w / 2, CAM_DIST - SUBJECT_DEPTH
+    if parts.get("_style") == "outline":
+        pts = [tuple(p) for p in outline]
+        set_flat_outline(parts["outline_body"], pts, d_head + 0.8, aspect)
+        if "outline_hair" in parts:
+            hair = clip_above(pts, y + s["body_top"] * h)
+            set_flat_outline(parts["outline_hair"], hair if len(hair) >= 3 else pts[:3], d_head + 0.4, aspect)
+        if "head" in parts:
+            place_on_screen(parts["head"], cx, y + s["head_cy"] * h, s["head_w"] * w, s["head_h"] * h, d_head, aspect, 0.7)
+        return
     if parts.get("_style") == "silhouette":
         if "body" in parts:
             set_flat_outline(parts["body"], body_outline(cx, y + s["body_top"] * h, s["neck_w"] * w, s["body_w"] * w, s["shoulder_drop"] * h), d_head + 0.8, aspect)
@@ -287,7 +341,7 @@ def apply_candidate(sc, obj, spec, p):
     obj["glare"].inputs["Threshold"].default_value = 0.8
     obj["vignette"].inputs["Fac"].default_value = p["vignette"]
     if obj["character"]:
-        place_character(obj["character"], spec["subject_bbox_xywh"], p.get("shape"), obj["aspect"])
+        place_character(obj["character"], spec["subject_bbox_xywh"], p.get("shape"), obj["aspect"], spec.get("outline"))
 
 
 def key_animation(sc, obj, spec, p):
@@ -305,8 +359,9 @@ def key_animation(sc, obj, spec, p):
         cam.data.keyframe_insert("lens", frame=f)
         cam.keyframe_insert("rotation_euler", frame=f)
     offsets = p.get("exposure_offsets") or {}
+    cel = SHADING["mode"] == "cel"                             # cel colours are the measured colours: no exposure on top
     for k in spec["exposure_keys"]:
-        sc.view_settings.exposure = p["exposure"] + float(offsets.get(str(k["frame"]), 0.0))
+        sc.view_settings.exposure = 0.0 if cel else p["exposure"] + float(offsets.get(str(k["frame"]), 0.0))
         sc.view_settings.keyframe_insert("exposure", frame=k["frame"])
 
 
@@ -315,6 +370,7 @@ def main():
     spec = job["spec"]
     out = Path(job["out_dir"])
     out.mkdir(parents=True, exist_ok=True)
+    SHADING["mode"] = spec.get("shading", "lit")
     sc = setup_render(int(job["width"]), int(job["height"]), int(job.get("samples", 16)))
     obj = build_scene(sc, spec, int(job["width"]), int(job["height"]))
     n = 0

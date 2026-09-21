@@ -54,6 +54,10 @@ def run(slug, shot, rounds=8, n_probe=3, style="ellipsoid"):
     spec = L3.build_scene_spec(script)
     spec["character_style"] = style
     steps = {**SHAPE_STEPS, **(SILHOUETTE_STEPS if style == "silhouette" else {})}
+    if style == "outline":
+        if not spec.get("outline"):
+            sys.exit("no measured silhouette outline for this shot (run training/measure_character_outlines.py)")
+        steps = {k: SHAPE_STEPS[k] for k in ("head_w", "head_h", "head_cy", "body_top")}   # the outline is measured; only head + hair/body split tune
     if not spec["character"]:
         sys.exit("no character proxy for this shot (needs semantic characters + a detected face box)")
     rung4 = json.loads((HERE / "runs" / D.name / f"level4_shot{shot:02d}" / "report.json").read_text(encoding="utf-8"))
@@ -103,7 +107,7 @@ def main():
     ap.add_argument("shot", type=int)
     ap.add_argument("--rounds", type=int, default=8)
     ap.add_argument("--probe", type=int, default=3)
-    ap.add_argument("--style", default="ellipsoid", choices=["ellipsoid", "silhouette"])
+    ap.add_argument("--style", default="ellipsoid", choices=["ellipsoid", "silhouette", "outline"])
     a = ap.parse_args()
     run(a.slug, a.shot, a.rounds, a.probe, a.style)
 
