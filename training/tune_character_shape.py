@@ -104,7 +104,7 @@ def tune_to_outline(params, steps, spec, script, rounds=60):
     return {**params, "shape": shape}, best, log
 
 
-def run(slug, shot, rounds=8, n_probe=3, style="ellipsoid", features=False, landmark_face=False, objective="frame_score"):
+def run(slug, shot, rounds=8, n_probe=3, style="ellipsoid", features=False, landmark_face=False, objective="frame_score", flat_proxy=False):
     D = L3.find_reference(slug)
     meta = json.loads((D / "meta.json").read_text(encoding="utf-8"))
     rect = meta["content_rect_640"]
@@ -133,6 +133,16 @@ def run(slug, shot, rounds=8, n_probe=3, style="ellipsoid", features=False, land
         steps = {k: v for k, v in steps.items() if not k.startswith(("head_", "eye_", "mouth_"))}
     if objective == "outline":
         tag += "_iou"
+    if flat_proxy:
+        spec["flat_proxy"] = True
+        tag += "_flat"
+    if rounds == 0:                                            # score the starting shape only
+        rep = L3.render_and_score(D, spec, params, lo, f"{tag}/after", rect)
+        (HERE / "runs" / D.name / tag / "report.json").write_text(json.dumps({"slug": D.name, "shot": shot, "landmark_face": landmark_face,
+            "flat_proxy": flat_proxy, "rounds": 0, "after": rep, "shape_after": params["shape"]}, indent=1), encoding="utf-8")
+        print(f"{D.name[:30]} shot {shot} (no tuning): frame_score={rep['frame_score']:.4f} ssim={rep['ssim']:.3f} hist={rep['hist']:.3f} "
+              f"edge_f1={rep['edge_f1']:.3f} holdout={rep['grad_ssim_holdout']:.3f}", flush=True)
+        return rep
     work = HERE / "runs" / D.name / tag
     probe = sorted({int(v) for v in np.linspace(0, spec["frames"] - 1, n_probe)})
     t0 = time.time()
@@ -197,10 +207,11 @@ def main():
     ap.add_argument("--features", action="store_true", help="add parametric anime eyes and mouth (style defaults for colour)")
     ap.add_argument("--objective", default="frame_score", choices=["frame_score", "outline"],
                     help="outline = maximise IoU with the measured silhouette (geometry only); frame_score = rung-5 behaviour")
+    ap.add_argument("--flat-proxy", action="store_true", help="hair/head/body ellipsoids unlit in their measured colours")
     ap.add_argument("--landmark-face", action="store_true", help="face shape, eyes, brows, mouth placed on the measured landmarks")
     ap.add_argument("--style", default="ellipsoid", choices=["ellipsoid", "silhouette", "outline"])
     a = ap.parse_args()
-    run(a.slug, a.shot, a.rounds, a.probe, a.style, a.features, a.landmark_face, a.objective)
+    run(a.slug, a.shot, a.rounds, a.probe, a.style, a.features, a.landmark_face, a.objective, a.flat_proxy)
 
 
 if __name__ == "__main__":

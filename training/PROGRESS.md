@@ -376,3 +376,23 @@ flatness where it is flat. A lit ellipsoid puts smooth shading gradients across 
 fills), and the bigger the proxy, the more of them -- which is why no character at all still scores best on 32 (0.609).
 Next candidates, both about interior gradients rather than outline: flat (unlit, measured-colour) hair and body proxies
 like the landmark face; then interior structure (hair masses, clothing folds) where the reference has edges.
+
+## 2026-09-21 -- flat (unlit, measured-colour) hair and body proxies: mixed, hypothesis only half right
+
+`--flat-proxy`: hair/head/body ellipsoids use the same exposure-compensated emission as the landmark face
+(blender_level3.measured_colour_material). Scored at the default shape, landmark face on, no tuning (`--rounds 0`).
+
+| shot | lit proxies: frame_score / holdout | flat proxies | no character |
+|---|---|---|---|
+| FF 27 | 0.579 / 0.508 | 0.573 / 0.499 | -- |
+| FF 50 | 0.481 / 0.395 | 0.477 / 0.375 | -- |
+| FF 32 | 0.587 / 0.569 | 0.631 / 0.596 | 0.568 / 0.609 |
+
+Flat helps the blond close-up (32: holdout +0.027, frame_score +0.044) and hurts both dark-haired shots (-0.009, -0.020).
+So the previous entry's explanation ("lit shading adds gradients where anime is flat") holds only where the reference hair
+IS flat: 32's short blond hair is a few flat tones, while 27/50 have dense strand lines -- there the lit ellipsoid's
+shading gradient was standing in (badly) for the reference's hair detail, and removing it removes gradient where the
+reference has plenty. The holdout rewards matching the gradient distribution, not flatness. On 32 no character still wins.
+Stays off by default. What the numbers point at: the proxies need interior detail that follows the measured
+characters.line_art density (dense in hair, sparse on skin) -- rung 6 tried generic strokes and lost; the difference now
+would be placing hair masses from the landmarks/outline, not strands from templates.

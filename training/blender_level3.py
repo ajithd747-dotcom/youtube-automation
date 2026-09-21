@@ -133,12 +133,8 @@ def make_flat(name, rgb):
 EXPOSURE_COMPENSATED = []     # emission strength sockets keyed to 2^-exposure, so these surfaces display their measured colour
 
 
-def make_measured_flat(name, rgb):
-    """Flat surface that shows exactly `rgb` in the render: unlit emission whose strength is keyed against the exposure curve
-    (key_animation). For colours that were MEASURED on the reference frame -- lighting them again would double-count."""
-    mesh = bpy.data.meshes.new(name)
-    o = bpy.data.objects.new(name, mesh)
-    bpy.context.scene.collection.objects.link(o)
+def measured_colour_material(name, rgb):
+    """Unlit emission showing exactly `rgb`: strength keyed against the exposure curve (key_animation)."""
     mat = bpy.data.materials.new(name)
     mat.use_nodes = True
     nt = mat.node_tree
@@ -146,7 +142,16 @@ def make_measured_flat(name, rgb):
     emit.inputs["Color"].default_value = (*rgb_lin(rgb), 1.0)
     nt.links.new(emit.outputs["Emission"], nt.nodes["Material Output"].inputs["Surface"])
     EXPOSURE_COMPENSATED.append(emit.inputs["Strength"])
-    mesh.materials.append(mat)
+    return mat
+
+
+def make_measured_flat(name, rgb):
+    """Flat surface that shows exactly `rgb` in the render. For colours that were MEASURED on the reference frame --
+    lighting them again would double-count."""
+    mesh = bpy.data.meshes.new(name)
+    o = bpy.data.objects.new(name, mesh)
+    bpy.context.scene.collection.objects.link(o)
+    mesh.materials.append(measured_colour_material(name, rgb))
     return o
 
 
@@ -186,13 +191,13 @@ def body_outline(cx, neck_y, neck_w, shoulder_w, shoulder_drop):
             (cx - 0.5 * shoulder_w, neck_y + shoulder_drop), (cx - 0.5 * shoulder_w * 0.8, neck_y + shoulder_drop * 0.6)]
 
 
-def make_ellipsoid(name, rgb):
+def make_ellipsoid(name, rgb, flat=False):
+    """flat: unlit in the measured colour (measured_colour_material) -- a silhouette with no shading gradient, like a cel fill."""
     bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=24, radius=0.5)
     o = bpy.context.active_object
     o.name = name
     bpy.ops.object.shade_smooth()
-    mat, _, _ = diffuse_material(name, colour_lin=rgb_lin(rgb))
-    o.data.materials.append(mat)
+    o.data.materials.append(measured_colour_material(name, rgb) if flat else diffuse_material(name, colour_lin=rgb_lin(rgb))[0])
     return o
 
 
@@ -223,7 +228,7 @@ def clip_above(pts, y_cut):
     return out
 
 
-def build_character(ch, style="ellipsoid"):
+def build_character(ch, style="ellipsoid", flat=False):
     """Character proxy from the semantic pass + measured colours: body (behind), hair (behind the head), head (front);
     the silhouette style adds bangs in front of the head and uses flat outlines for hair and body."""
     col = {"body": ch.get("body_rgb"), "hair": ch.get("hair_rgb"), "head": ch.get("skin_rgb")}
@@ -231,7 +236,7 @@ def build_character(ch, style="ellipsoid"):
     for k, rgb in col.items():
         if not isinstance(rgb, list):
             continue
-        parts[k] = make_flat(k, rgb) if (style == "silhouette" and k != "head") else make_ellipsoid(k, rgb)
+        parts[k] = make_flat(k, rgb) if (style == "silhouette" and k != "head") else make_ellipsoid(k, rgb, flat)
     if style == "outline":
         # measured silhouette: whole outline in the body colour, the part above the chin in the hair colour, head in front
         for k in ("body", "hair"):
@@ -463,7 +468,7 @@ def build_scene(sc, spec, width, height):
     subject = None
     ch = spec.get("character")
     if ch and spec.get("subject_bbox_xywh"):
-        subject = build_character(ch, spec.get("character_style", "ellipsoid"))
+        subject = build_character(ch, spec.get("character_style", "ellipsoid"), bool(spec.get("flat_proxy")))
         if spec.get("face_features"):
             subject["_features"] = build_face_features(ch)
         if spec.get("face_from_landmarks") and spec.get("landmarks") and isinstance(ch.get("skin_rgb"), list):
