@@ -2,7 +2,7 @@
 script's measured features, character proxy when the semantic pass names one), joined with the recreated voice + music
 (training/recreate_audio.py), encoded, and scored frame by frame against the reference.
 
-    .venv/bin/python training/recreate_video.py <slug> [--rounds 6] [--shots 0-62]
+    .venv/bin/python training/recreate_video.py <slug> [--rounds 6] [--shots 0-62] [--out video]
 
 Resumable: a shot whose frames are already rendered is skipped. Writes training/runs/<slug>/video/{frames/, shots.json,
 recreation.mp4, scores.json}. The recreation is derived from copyrighted work: it stays local (CLAUDE.md rule 3).
@@ -30,13 +30,13 @@ def expand(spec, n):
     return out
 
 
-def run(slug, rounds=6, shots_spec=""):
+def run(slug, rounds=6, shots_spec="", out_name="video"):
     D = L3.find_reference(slug)
     meta = json.loads((D / "meta.json").read_text(encoding="utf-8"))
     rect = meta["content_rect_640"]
     W, H = rect[2] - rect[0], rect[3] - rect[1]
     shots = json.loads((D / "shots.json").read_text(encoding="utf-8"))["shots"]
-    out = HERE / "runs" / D.name / "video"
+    out = HERE / "runs" / D.name / out_name
     frames_dir = out / "frames"
     frames_dir.mkdir(parents=True, exist_ok=True)
     log_path = out / "shots.json"
@@ -72,7 +72,7 @@ def run(slug, rounds=6, shots_spec=""):
         cmd += ["-i", str(audio), "-c:a", "aac", "-b:a", "192k", "-shortest"]
     cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", str(out / "recreation.mp4")]
     subprocess.run(cmd, check=True)
-    subprocess.run([sys.executable, str(HERE / "score_recreation.py"), D.name, str(frames_dir), "--start", "0", "--run", "video"], check=True)
+    subprocess.run([sys.executable, str(HERE / "score_recreation.py"), D.name, str(frames_dir), "--start", "0", "--run", out_name], check=True)
     print(f"-> {out / 'recreation.mp4'}")
 
 
@@ -81,8 +81,9 @@ def main():
     ap.add_argument("slug")
     ap.add_argument("--rounds", type=int, default=6)
     ap.add_argument("--shots", default="")
+    ap.add_argument("--out", default="video", help="run folder name under training/runs/<slug>/")
     a = ap.parse_args()
-    run(a.slug, a.rounds, a.shots)
+    run(a.slug, a.rounds, a.shots, a.out)
 
 
 if __name__ == "__main__":
