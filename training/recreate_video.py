@@ -1,0 +1,89 @@
+"""Recreate a whole reference video: every shot through the rung 3/4 pipeline (scene from the shot script, lights tuned to the
+script's measured features, character proxy when the semantic pass names one), joined with the recreated voice + music
+(training/recreate_audio.py), encoded, and scored frame by frame against the reference.
+
+    .venv/bin/python training/recreate_video.py <slug> [--rounds 6] [--shots 0-62]
+
+Resumable: a shot whose frames are already rendered is skipped. Writes training/runs/<slug>/video/{frames/, shots.json,
+recreation.mp4, scores.json}. The recreation is derived from copyrighted work: it stays local (CLAUDE.md rule 3).
+"""
+import argparse
+import json
+import shutil
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+import recreate_level3 as L3  # noqa: E402
+
+
+def expand(spec, n):
+    if not spec:
+        return list(range(n))
+    out = []
+    for part in spec.split(","):
+        a, _, b = part.partition("-")
+        out += list(range(int(a), int(b or a) + 1))
+    return out
+
+
+def run(slug, rounds=6, shots_spec=""):
+    D = L3.find_reference(slug)
+    meta = json.loads((D / "meta.json").read_text(encoding="utf-8"))
+    rect = meta["content_rect_640"]
+    W, H = rect[2] - rect[0], rect[3] - rect[1]
+    shots = json.loads((D / "shots.json").read_text(encoding="utf-8"))["shots"]
+    out = HERE / "runs" / D.name / "video"
+    frames_dir = out / "frames"
+    frames_dir.mkdir(parents=True, exist_ok=True)
+    log_path = out / "shots.json"
+    done = json.loads(log_path.read_text(encoding="utf-8")) if log_path.exists() else {}
+    for i in expand(shots_spec, len(shots)):
+        sh = shots[i]
+        if str(i) in done and all((frames_dir / f"f_{f + 1:05d}.png").exists() for f in range(sh["start"], sh["end"])):
+            continue
+        t0 = time.time()
+        script = json.loads((D / "shots" / f"shot_{i:02d}.json").read_text(encoding="utf-8"))
+        spec = L3.build_scene_spec(script)
+        work = out / "work" / f"shot_{i:02d}"
+        tlog = []
+        params = L3.tune(spec, L3.initial_params(script), rounds, work, tlog)
+        paths = L3.render(spec, [params], list(range(spec["frames"])), W, H, work / "final")
+        for f in range(spec["frames"]):
+            shutil.move(str(paths[(0, f)]), frames_dir / f"f_{sh['start'] + f + 1:05d}.png")
+        shutil.rmtree(work, ignore_errors=True)
+        done[str(i)] = {"frames": [sh["start"], sh["end"]], "character_proxy": spec["character"] is not None,
+                        "feature_error": tlog[-1]["error"], "seconds": round(time.time() - t0, 1), "params": params}
+        log_path.write_text(json.dumps(done, indent=1), encoding="utf-8")
+        print(f"shot {i} ({spec['frames']}f) character={spec['character'] is not None} feature_error {tlog[0]['error']:.2f} -> {tlog[-1]['error']:.2f} "
+              f"({time.time() - t0:.0f}s)", flush=True)
+
+    n = meta["nb_frames"]
+    missing = [f for f in range(n) if not (frames_dir / f"f_{f + 1:05d}.png").exists()]
+    if missing:
+        print(f"{len(missing)} frames not rendered yet -- not encoding")
+        return
+    audio = HERE / "runs" / D.name / "audio" / "mix.wav"
+    cmd = ["ffmpeg", "-y", "-loglevel", "error", "-framerate", meta["fps_rational"], "-i", str(frames_dir / "f_%05d.png")]
+    if audio.exists():
+        cmd += ["-i", str(audio), "-c:a", "aac", "-b:a", "192k", "-shortest"]
+    cmd += ["-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "18", str(out / "recreation.mp4")]
+    subprocess.run(cmd, check=True)
+    subprocess.run([sys.executable, str(HERE / "score_recreation.py"), D.name, str(frames_dir), "--start", "0", "--run", "video"], check=True)
+    print(f"-> {out / 'recreation.mp4'}")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("slug")
+    ap.add_argument("--rounds", type=int, default=6)
+    ap.add_argument("--shots", default="")
+    a = ap.parse_args()
+    run(a.slug, a.rounds, a.shots)
+
+
+if __name__ == "__main__":
+    main()
