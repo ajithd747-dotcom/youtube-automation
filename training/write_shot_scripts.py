@@ -282,9 +282,21 @@ def colour_regions_section(grid_frames, subject_bbox_xywh, subject_source):
         cells = g[max(y0, 0):min(max(y1, y0 + 1), gh), max(x0, 0):min(max(x1, x0 + 1), gw)].reshape(-1, 3)
         if len(cells):
             out.update(subject_rgb=[int(v) for v in np.median(cells, axis=0)], subject_bbox_xywh=[r(v) for v in subject_bbox_xywh], subject_source=subject_source)
-        if subject_source and subject_source.startswith("characters.face_track"):
+        if subject_source and subject_source.startswith("characters."):
             out["character"] = character_colours(g, subject_bbox_xywh)
     return out
+
+
+def head_box_from_outline(poly, meta):
+    """Face box (x, y, w, h frame fractions, brows-to-chin like the anime face detector) derived from a measured character
+    outline: the head is the top 35% of the outline; its width is 60% of that band's width, square in pixels."""
+    pts = np.array(poly, float)
+    top, bottom = pts[:, 1].min(), min(pts[:, 1].max(), 1.0)
+    band = pts[pts[:, 1] <= top + 0.35 * (bottom - top)]
+    x0, x1 = band[:, 0].min(), band[:, 0].max()
+    w = 0.6 * (x1 - x0)
+    h = min(w * meta["width"] / meta["height"], 0.9)
+    return [r((x0 + x1) / 2 - w / 2), r(top + 0.3 * h), r(w), r(h)]
 
 
 def character_colours(g, face_xywh):
@@ -477,20 +489,27 @@ def main():
                   "transitions": transition_section(rs, rows[sh["start"] - 1:sh["start"]] or None, rows[sh["end"]:sh["end"] + 1] or None, fps),
                   "audio": audio_section(rs, fps, transcript), "characters": characters_section(rs, fps), "text_on_screen": text_section(rs, fps),
                   "semantic": {"setting": NM, "characters": NM, "actions": NM, "props": NM, "weather_particles_seen": NM, "mood": NM, "filled_by": None}}
-        ch, co = script["characters"], script["composition"]
-        faces = [t["largest_face_bbox_xywh"] for t in ch["face_track"] if t.get("largest_face_bbox_xywh")] if isinstance(ch["face_track"], list) else []
-        if faces and isinstance(ch["frames_with_face_share"], (int, float)) and ch["frames_with_face_share"] >= 0.5:
-            box, src = list(np.median(np.array(faces, float), axis=0)), "characters.face_track (median largest face)"
-        elif isinstance(co["subject_bbox_median"], list) and None not in co["subject_bbox_median"]:
-            box, src = co["subject_bbox_median"], "composition.subject_bbox_median (saliency)"
-        else:
-            box, src = None, None
-        script["colour"]["regions"] = colour_regions_section(grid32[sh["start"]:sh["end"]] if grid32 is not None else None, box, src)
         if outlines and str(i) in outlines["shots"]:
             script["characters"]["silhouette_outline"] = {"keyframes": outlines["shots"][str(i)], "measured_on": f"{outlines['model']} foreground > {outlines['threshold']}, largest region, <= 40 points",
                                                           "units": outlines["units"]}
         if semantic and str(i) in semantic["shots"]:
             script["semantic"] = {**semantic["shots"][str(i)], "filled_by": semantic["filled_by"]}
+        ch, co = script["characters"], script["composition"]
+        faces = [t["largest_face_bbox_xywh"] for t in ch["face_track"] if t.get("largest_face_bbox_xywh")] if isinstance(ch["face_track"], list) else []
+        seen = script["semantic"]["characters"]                       # vision pass: list of characters, [] = none seen, NM = not run
+        outline = next((k["polygon"] for k in sorted(ch.get("silhouette_outline", {}).get("keyframes", []), key=lambda k: abs(k["frame"] - (sh["end"] - sh["start"]) // 2))
+                        if isinstance(k["polygon"], list)), None)
+        if faces and isinstance(ch["frames_with_face_share"], (int, float)) and ch["frames_with_face_share"] >= 0.5:
+            box, src = list(np.median(np.array(faces, float), axis=0)), "characters.face_track (median largest face)"
+        elif isinstance(seen, list) and seen and outline:
+            box, src = head_box_from_outline(outline, meta), "characters.silhouette_outline (head box derived from the measured outline; face detector found none)"
+        elif isinstance(seen, list) and not seen:
+            box, src = None, None                                     # the vision pass saw no character: no subject proxy
+        elif isinstance(co["subject_bbox_median"], list) and None not in co["subject_bbox_median"]:
+            box, src = co["subject_bbox_median"], "composition.subject_bbox_median (saliency)"
+        else:
+            box, src = None, None
+        script["colour"]["regions"] = colour_regions_section(grid32[sh["start"]:sh["end"]] if grid32 is not None else None, box, src)
         script["blender_directives"] = blender_directives(script)
         (D_ / "shots" / f"shot_{i:02d}.json").write_text(json.dumps(script, indent=1), encoding="utf-8")
         contact_sheet(D_ / "frames", sh["start"], sh["end"], D_ / "sheets" / f"shot_{i:02d}.jpg")
