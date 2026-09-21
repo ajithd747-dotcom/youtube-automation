@@ -336,3 +336,21 @@ the renders: the landmark face is placed right (eyes, brows, mouth on the measur
 face plane sits nearer the key light than the ellipsoid the lights were tuned with. So `landmark-placed-anime-face` stays
 unconfirmed. Fix being tried: draw the landmark face as emission in the measured colours, divided by the frame's exposure,
 so it displays at the measured colour whatever the lighting.
+
+## 2026-09-21 -- landmark face in measured colours (emission, exposure-compensated); the shape tuner fits hist
+
+`blender_level3.make_measured_flat`: the landmark face parts are unlit emission whose strength is keyed to 2^-exposure on
+the exposure curve, so they display exactly the measured colours (checked: rendered skin at the nose = measured light_rgb,
+[225,208,180] on 27 and [248,218,208] on 50). Lit, the face plane had clipped white on 32.
+
+| shot | no character | lit face: default shape / tuned | measured-colour face: default shape / tuned |
+|---|---|---|---|
+| FF 27 | -- | -- / 0.604, 0.513 | 0.579, 0.508 / 0.594, 0.514 |
+| FF 50 | -- | -- / 0.444, 0.406 | 0.481, 0.395 / 0.482, 0.397 |
+| FF 32 | 0.568, 0.609 | 0.552, 0.569 / 0.622, 0.511 | 0.587, 0.569 / 0.647, 0.517 |
+
+(frame_score, holdout.) Measured colours raise frame_score on 50 (+0.04, hist 0.44 -> 0.57) and 32; the holdout does not
+move with them. The bigger finding is the shape tuner itself: on 32 it grows the hair ellipsoid until hist reaches 0.962
+while the holdout falls 0.569 -> 0.517 -- frame_score's 0.25 hist weight rewards painting the frame the right colours in the
+wrong shapes. On a close-up that is the whole frame. The landmark face is still not confirmed: on 32 no character keeps the
+best holdout. Next: tune the proxy shape against the measured silhouette (characters.silhouette_outline IoU), not frame_score.

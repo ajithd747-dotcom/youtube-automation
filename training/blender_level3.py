@@ -130,6 +130,26 @@ def make_flat(name, rgb):
     return o
 
 
+EXPOSURE_COMPENSATED = []     # emission strength sockets keyed to 2^-exposure, so these surfaces display their measured colour
+
+
+def make_measured_flat(name, rgb):
+    """Flat surface that shows exactly `rgb` in the render: unlit emission whose strength is keyed against the exposure curve
+    (key_animation). For colours that were MEASURED on the reference frame -- lighting them again would double-count."""
+    mesh = bpy.data.meshes.new(name)
+    o = bpy.data.objects.new(name, mesh)
+    bpy.context.scene.collection.objects.link(o)
+    mat = bpy.data.materials.new(name)
+    mat.use_nodes = True
+    nt = mat.node_tree
+    emit = nt.nodes.new("ShaderNodeEmission")
+    emit.inputs["Color"].default_value = (*rgb_lin(rgb), 1.0)
+    nt.links.new(emit.outputs["Emission"], nt.nodes["Material Output"].inputs["Surface"])
+    EXPOSURE_COMPENSATED.append(emit.inputs["Strength"])
+    mesh.materials.append(mat)
+    return o
+
+
 def set_flat_outline(o, pts, dist, aspect):
     """Replace o's mesh with one flat n-gon through screen points pts [(x, y) frame fractions], `dist` from the camera."""
     vw, vh = view_size_at(dist, aspect)
@@ -335,14 +355,14 @@ def build_landmark_face(ch, ink_rgb, tones=None):
     darker tone (shadow or bangs over the face), eye whites, irises, shines, lash lines, brows, jaw line, mouth. Iris colour
     and eye white are the same style defaults as build_face_features."""
     iris = [int(v * 0.55) for v in ch["hair_rgb"]] if isinstance(ch.get("hair_rgb"), list) else LINE_DARK
-    f = {"face": make_flat("lm_face", tones["light_rgb"] if tones else ch["skin_rgb"])}
+    f = {"face": make_measured_flat("lm_face", tones["light_rgb"] if tones else ch["skin_rgb"])}
     if tones and isinstance(tones.get("dark_rgb"), list):
-        f["dark"] = make_flat("lm_dark", tones["dark_rgb"])
+        f["dark"] = make_measured_flat("lm_dark", tones["dark_rgb"])
     for side in ("l", "r"):
-        f[f"white_{side}"] = make_flat(f"lm_white_{side}", EYE_WHITE)
-        f[f"iris_{side}"] = make_flat(f"lm_iris_{side}", iris)
-        f[f"shine_{side}"] = make_flat(f"lm_shine_{side}", EYE_WHITE)
-    f["ink"] = make_flat("lm_ink", ink_rgb)                    # lashes, brows, jaw line and mouth: one ribbon mesh
+        f[f"white_{side}"] = make_measured_flat(f"lm_white_{side}", EYE_WHITE)
+        f[f"iris_{side}"] = make_measured_flat(f"lm_iris_{side}", iris)
+        f[f"shine_{side}"] = make_measured_flat(f"lm_shine_{side}", EYE_WHITE)
+    f["ink"] = make_measured_flat("lm_ink", ink_rgb)                    # lashes, brows, jaw line and mouth: one ribbon mesh
     return f
 
 
@@ -551,6 +571,9 @@ def key_animation(sc, obj, spec, p):
     for k in spec["exposure_keys"]:
         sc.view_settings.exposure = 0.0 if cel else p["exposure"] + float(offsets.get(str(k["frame"]), 0.0))
         sc.view_settings.keyframe_insert("exposure", frame=k["frame"])
+        for sock in EXPOSURE_COMPENSATED:                     # Standard view: display = linear * 2^exposure -> cancel it
+            sock.default_value = 2.0 ** -sc.view_settings.exposure
+            sock.keyframe_insert("default_value", frame=k["frame"])
 
 
 def main():
