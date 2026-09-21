@@ -300,3 +300,20 @@ Best frame_score on both shots and the best holdout on 50 (+0.012 over rung 5); 
 face's +0.003. hist recovers most of what the flat face lost. Tones and animation were changed together -- their separate
 contributions are NOT MEASURED. Blinks between keyframes are not captured (3 keyframes per shot).
 Candidate skill: `landmark-placed-anime-face` (holdout up on 50, level on 27; needs a third shot -- S32 after Fragrant v2).
+
+## 2026-09-21 -- Fragrant Flower v2 (subject proxy follows the vision pass) + mastered audio
+
+v2 = the whole trailer again with commit c1bd22a (no subject when the vision pass sees no character; head box from the
+measured outline when the cascade misses). Re-encoded with the mastered mix.
+
+| measure | v1 | v2 |
+|---|---|---|
+| frame_score / holdout | 0.463 / 0.506 | 0.462 / 0.503 |
+| cut F1 / motion corr / brightness corr | 0.941 / 0.954 / 0.998 | 0.950 / 0.955 / 0.997 |
+| audio_score (benchmark) | 0.405 | 0.79 (mastered: -29.8 -> -25.2 LUFS = reference; key matches) |
+| overall (benchmark) | 0.595 | 0.788 |
+
+The subject change is a wash on the picture: 40 shots moved, all of them outline-derived head boxes -- gains up to +0.10
+(S11, S26, S33), losses down to -0.10 (S38, S32, S34, S14, mostly the blond boy the cascade cannot see). The overall jump
+is the audio mastering. Scripts are now rebuilt with the landmark box ahead of the outline guess: the face-box source for
+the 63 shots is now face_landmarks 27, face_track 14, silhouette_outline 3, saliency 2, none 17.
