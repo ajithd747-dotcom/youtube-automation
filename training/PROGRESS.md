@@ -108,3 +108,38 @@ descent on mean frame_score of 3 probe frames; holdout never used to accept a st
 What it taught: the gain is almost all edge_f1 (outlines moved toward the real ones); holdout +0.007 on 27, flat on 50, so it
 is not only fitting the metric, but three ellipsoids have hit their ceiling (~+0.01-0.03). Next shape step needs a richer
 silhouette family (hair outline with spikes/bangs, shoulders), not more tuning of ellipsoids.
+
+## 2026-09-21 -- silhouette character style (A) -- no clear gain over ellipsoids
+
+`--style silhouette`: flat back-hair outline (spiked crown + side locks), zigzag bangs in front of the forehead, neck/shoulder
+body outline; 13 shape parameters tuned the same way (frame_score on probe frames, holdout untouched).
+
+| shot | ellipsoid tuned: frame_score / holdout | silhouette tuned: frame_score / holdout |
+|---|---|---|
+| FF 27 | 0.560 / 0.513 | 0.553 / 0.504 |
+| FF 50 | 0.444 / 0.394 | 0.456 / 0.379 |
+
+Split verdict, and the holdout sides with the ellipsoids on both. Hand-designed generic outlines do not match specific hair
+shapes; the next shape step needs the outline itself measured per character (not generic spikes), or a different family.
+
+## 2026-09-21 -- audio: character voice-over + music (B), Fragrant Flower whole trailer
+
+training/recreate_audio.py: Demucs split -> per-line F0/level on the vocals stem -> Kokoro Japanese voice chosen by F0,
+stretched/pitched/levelled per line; music planned from the no-vocals stem (tempo, key, energy, hits) and rendered with
+FluidSynth; mixed and scored.
+
+| measure | result | reference point |
+|---|---|---|
+| voice character accuracy (Whisper small ja) | 0.846 | 0.888 on the reference vocals stem (ceiling) |
+| speech envelope correlation | 0.615 | |
+| median F0 error per line | 0.41 semitones | |
+| music energy-curve correlation | 0.95 | |
+| music tempo | 70 bpm vs 140 detected (half-time, bpm_rel 0.007) | |
+| music key | planned D minor; measured C major after mastering/impacts | key_match False |
+| mix loudness-curve correlation | 0.821 | |
+| mix LUFS | -29.8 | -28.3 |
+
+Found and fixed: the music agent's minor progression i-VI-III-VII was HEARD as the relative major (D minor planned -> F major
+measured); now i-iv-VII-i, which measures as the planned key for D and A minor alone. In the full trailer render the key still
+reads C major after impacts and mastering, so key_match stays False -- the whole-track chroma key detector is fragile.
+Skill: `match-reference-character-voice-japanese` (candidate).

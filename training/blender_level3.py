@@ -85,7 +85,55 @@ DEFAULT_SHAPE = {   # character proxy, in units of the face box (x, y, w, h); tu
     "hair_w": 1.15, "hair_h": 1.05, "hair_cy": 0.35,
     "head_w": 0.75, "head_h": 0.8, "head_cy": 0.6,
     "body_w": 2.0, "body_top": 0.95,
+    # silhouette style only (spec["character_style"] == "silhouette")
+    "spike": 0.12, "side_len": 0.6, "bang_len": 0.35, "neck_w": 0.35, "shoulder_drop": 0.35,
 }
+BANG_TEETH = 5
+
+
+def make_flat(name, rgb):
+    mesh = bpy.data.meshes.new(name)
+    o = bpy.data.objects.new(name, mesh)
+    bpy.context.scene.collection.objects.link(o)
+    mat, _, _ = diffuse_material(name, colour_lin=rgb_lin(rgb))
+    mesh.materials.append(mat)
+    return o
+
+
+def set_flat_outline(o, pts, dist, aspect):
+    """Replace o's mesh with one flat n-gon through screen points pts [(x, y) frame fractions], `dist` from the camera."""
+    vw, vh = view_size_at(dist, aspect)
+    verts = [((x - 0.5) * vw, dist - CAM_DIST, (0.5 - y) * vh) for x, y in pts]
+    m = o.data
+    m.clear_geometry()
+    m.from_pydata(verts, [], [list(range(len(verts)))])
+    m.update()
+
+
+def hair_back_outline(cx, top, cw, ch, spike, side_bottom, n=24):
+    """Crown: upper half-ellipse with spikes on every other point, then straight side locks down to side_bottom."""
+    pts = []
+    for i in range(n + 1):
+        a = math.pi * i / n                                   # 0 = right, pi = left, over the top
+        r = 1.0 + (spike if i % 2 else 0.0)
+        pts.append((cx + 0.5 * cw * r * math.cos(a), top + 0.5 * ch - 0.5 * ch * r * math.sin(a)))
+    pts += [(cx - 0.5 * cw, side_bottom), (cx - 0.3 * cw, side_bottom), (cx + 0.3 * cw, side_bottom), (cx + 0.5 * cw, side_bottom)]
+    return pts
+
+
+def bangs_outline(cx, y0, w, length):
+    """Fringe over the forehead: straight top edge at y0, zigzag bottom edge `length` lower."""
+    pts = [(cx - 0.5 * w, y0), (cx + 0.5 * w, y0)]
+    for i in range(BANG_TEETH * 2 + 1):
+        x = cx + 0.5 * w - w * i / (BANG_TEETH * 2)
+        pts.append((x, y0 + (length if i % 2 else length * 0.35)))
+    return pts
+
+
+def body_outline(cx, neck_y, neck_w, shoulder_w, shoulder_drop):
+    return [(cx - 0.5 * neck_w, neck_y), (cx + 0.5 * neck_w, neck_y), (cx + 0.5 * shoulder_w * 0.8, neck_y + shoulder_drop * 0.6),
+            (cx + 0.5 * shoulder_w, neck_y + shoulder_drop), (cx + 0.5 * shoulder_w, 1.3), (cx - 0.5 * shoulder_w, 1.3),
+            (cx - 0.5 * shoulder_w, neck_y + shoulder_drop), (cx - 0.5 * shoulder_w * 0.8, neck_y + shoulder_drop * 0.6)]
 
 
 def make_ellipsoid(name, rgb):
@@ -111,10 +159,19 @@ def screen_ellipsoid(name, cx, cy, sw, sh, dist, aspect, rgb, depth_ratio=0.6):
     return o
 
 
-def build_character(ch):
-    """Character proxy from the semantic pass + measured colours: body (behind), hair (behind the head), head (front)."""
-    return {k: make_ellipsoid(k, ch[f"{k if k != 'head' else 'skin'}_rgb"]) for k in ("body", "hair", "head")
-            if isinstance(ch.get(f"{k if k != 'head' else 'skin'}_rgb"), list)}
+def build_character(ch, style="ellipsoid"):
+    """Character proxy from the semantic pass + measured colours: body (behind), hair (behind the head), head (front);
+    the silhouette style adds bangs in front of the head and uses flat outlines for hair and body."""
+    col = {"body": ch.get("body_rgb"), "hair": ch.get("hair_rgb"), "head": ch.get("skin_rgb")}
+    parts = {}
+    for k, rgb in col.items():
+        if not isinstance(rgb, list):
+            continue
+        parts[k] = make_flat(k, rgb) if (style == "silhouette" and k != "head") else make_ellipsoid(k, rgb)
+    if style == "silhouette" and isinstance(col["hair"], list):
+        parts["bangs"] = make_flat("bangs", col["hair"])
+    parts["_style"] = style
+    return parts
 
 
 def place_character(parts, face_xywh, shape, aspect):
@@ -122,6 +179,19 @@ def place_character(parts, face_xywh, shape, aspect):
     x, y, w, h = face_xywh
     s = {**DEFAULT_SHAPE, **(shape or {})}
     cx, d_head = x + w / 2, CAM_DIST - SUBJECT_DEPTH
+    if parts.get("_style") == "silhouette":
+        if "body" in parts:
+            set_flat_outline(parts["body"], body_outline(cx, y + s["body_top"] * h, s["neck_w"] * w, s["body_w"] * w, s["shoulder_drop"] * h), d_head + 0.8, aspect)
+        if "hair" in parts:
+            top = y + s["hair_cy"] * h - 0.5 * s["hair_h"] * h
+            set_flat_outline(parts["hair"], hair_back_outline(cx, top, s["hair_w"] * w, s["hair_h"] * h, s["spike"], y + (s["hair_cy"] + s["side_len"]) * h + 0.5 * s["hair_h"] * h),
+                             d_head + 0.4, aspect)
+        if "head" in parts:
+            place_on_screen(parts["head"], cx, y + s["head_cy"] * h, s["head_w"] * w, s["head_h"] * h, d_head, aspect, 0.7)
+        if "bangs" in parts:
+            head_top = y + (s["head_cy"] - 0.5 * s["head_h"]) * h
+            set_flat_outline(parts["bangs"], bangs_outline(cx, head_top, s["head_w"] * w * 1.05, s["bang_len"] * h), d_head - 0.6, aspect)
+        return
     if "body" in parts:
         top = y + s["body_top"] * h
         place_on_screen(parts["body"], cx, (top + 1.3) / 2, s["body_w"] * w, 1.3 - top, d_head + 0.8, aspect, 0.5)
@@ -157,7 +227,7 @@ def build_scene(sc, spec, width, height):
     subject = None
     ch = spec.get("character")
     if ch and spec.get("subject_bbox_xywh"):
-        subject = build_character(ch)
+        subject = build_character(ch, spec.get("character_style", "ellipsoid"))
     elif spec.get("subject_bbox_xywh") and spec.get("subject_rgb"):
         x, y, w, h = spec["subject_bbox_xywh"]
         subject = screen_ellipsoid("subject", x + w / 2, y + h / 2, w, h, CAM_DIST - SUBJECT_DEPTH, aspect, spec["subject_rgb"], depth_ratio=0.6)

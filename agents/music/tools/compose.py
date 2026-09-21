@@ -8,7 +8,8 @@ import synth as S
 
 SCALES = {"minor": [0, 2, 3, 5, 7, 8, 10], "major": [0, 2, 4, 5, 7, 9, 11], "dorian": [0, 2, 3, 5, 7, 9, 10], "phrygian": [0, 1, 3, 5, 7, 8, 10]}
 PROGRESSIONS = {  # scale-degree roots (0-based) per bar
-    "minor": [0, 5, 2, 6], "major": [0, 4, 5, 3], "dorian": [0, 3, 0, 6], "phrygian": [0, 1, 0, 6]}
+    # minor = i-iv-VII-i: the old i-VI-III-VII was heard as the relative major (D minor planned -> F major measured, 2026-09-21)
+    "minor": [0, 3, 6, 0], "major": [0, 4, 5, 3], "dorian": [0, 3, 0, 6], "phrygian": [0, 1, 0, 6]}
 STYLES = {  # per-style character
     "cinematic-action": dict(kick=True, taiko=True, arp=True, bell=False, hats=16, pad_cut=2400, bass_cut=520, snare="clap"),
     "uplifting": dict(kick=True, taiko=False, arp=True, bell=True, hats=8, pad_cut=3200, bass_cut=420, snare="snare"),

@@ -24,7 +24,9 @@ import recreate_level3 as L3  # noqa: E402
 from score_recreation import build_mask, load_reference_frame, score_frame_pair  # noqa: E402
 
 SHAPE_STEPS = {"hair_w": 0.15, "hair_h": 0.15, "hair_cy": 0.1, "head_w": 0.1, "head_h": 0.1, "head_cy": 0.08, "body_w": 0.3, "body_top": 0.15}
-DEFAULT_SHAPE = {"hair_w": 1.15, "hair_h": 1.05, "hair_cy": 0.35, "head_w": 0.75, "head_h": 0.8, "head_cy": 0.6, "body_w": 2.0, "body_top": 0.95}
+SILHOUETTE_STEPS = {"spike": 0.06, "side_len": 0.2, "bang_len": 0.12, "neck_w": 0.12, "shoulder_drop": 0.15}
+DEFAULT_SHAPE = {"hair_w": 1.15, "hair_h": 1.05, "hair_cy": 0.35, "head_w": 0.75, "head_h": 0.8, "head_cy": 0.6, "body_w": 2.0, "body_top": 0.95,
+                 "spike": 0.12, "side_len": 0.6, "bang_len": 0.35, "neck_w": 0.35, "shoulder_drop": 0.35}   # = blender_level3.DEFAULT_SHAPE
 
 
 def probe_scores(D, spec, lo, rect, candidates, probe, work):
@@ -43,18 +45,21 @@ def probe_scores(D, spec, lo, rect, candidates, probe, work):
     return out
 
 
-def run(slug, shot, rounds=8, n_probe=3):
+def run(slug, shot, rounds=8, n_probe=3, style="ellipsoid"):
     D = L3.find_reference(slug)
     meta = json.loads((D / "meta.json").read_text(encoding="utf-8"))
     rect = meta["content_rect_640"]
     script = json.loads((D / "shots" / f"shot_{shot:02d}.json").read_text(encoding="utf-8"))
     lo = script["frames"][0]
     spec = L3.build_scene_spec(script)
+    spec["character_style"] = style
+    steps = {**SHAPE_STEPS, **(SILHOUETTE_STEPS if style == "silhouette" else {})}
     if not spec["character"]:
         sys.exit("no character proxy for this shot (needs semantic characters + a detected face box)")
     rung4 = json.loads((HERE / "runs" / D.name / f"level4_shot{shot:02d}" / "report.json").read_text(encoding="utf-8"))
     params = {**rung4["params_tuned"], "shape": dict(DEFAULT_SHAPE)}
-    work = HERE / "runs" / D.name / f"level5_shot{shot:02d}"
+    tag = f"level5_shot{shot:02d}" + ("" if style == "ellipsoid" else f"_{style}")
+    work = HERE / "runs" / D.name / tag
     probe = sorted({int(v) for v in np.linspace(0, spec["frames"] - 1, n_probe)})
     t0 = time.time()
     (best, best_hold), = probe_scores(D, spec, lo, rect, [params], probe, work / "probe")
@@ -63,7 +68,7 @@ def run(slug, shot, rounds=8, n_probe=3):
     scale = 1.0
     for rnd in range(1, rounds + 1):
         cands, labels = [], []
-        for k, st in SHAPE_STEPS.items():
+        for k, st in steps.items():
             for d in (+1, -1):
                 sh = dict(params["shape"])
                 sh[k] = max(0.05, sh[k] + d * st * scale)
@@ -80,9 +85,9 @@ def run(slug, shot, rounds=8, n_probe=3):
         print(f"  round {rnd}: frame_score {best:.4f} holdout {best_hold:.4f} ({moved})", flush=True)
         if scale < 0.2:
             break
-    before = L3.render_and_score(D, spec, {**rung4["params_tuned"], "shape": dict(DEFAULT_SHAPE)}, lo, f"level5_shot{shot:02d}/before", rect)
-    after = L3.render_and_score(D, spec, params, lo, f"level5_shot{shot:02d}/after", rect)
-    report = {"slug": D.name, "shot": shot, "probe_frames": probe, "seconds_wall": round(time.time() - t0, 1),
+    before = L3.render_and_score(D, spec, {**rung4["params_tuned"], "shape": dict(DEFAULT_SHAPE)}, lo, f"{tag}/before", rect)
+    after = L3.render_and_score(D, spec, params, lo, f"{tag}/after", rect)
+    report = {"slug": D.name, "shot": shot, "style": style, "probe_frames": probe, "seconds_wall": round(time.time() - t0, 1),
               "objective": "mean frame_score on probe frames (holdout never used to accept a step)",
               "before": before, "after": after, "shape_before": DEFAULT_SHAPE, "shape_after": params["shape"], "log": log}
     (work / "report.json").write_text(json.dumps(report, indent=1), encoding="utf-8")
@@ -98,8 +103,9 @@ def main():
     ap.add_argument("shot", type=int)
     ap.add_argument("--rounds", type=int, default=8)
     ap.add_argument("--probe", type=int, default=3)
+    ap.add_argument("--style", default="ellipsoid", choices=["ellipsoid", "silhouette"])
     a = ap.parse_args()
-    run(a.slug, a.shot, a.rounds, a.probe)
+    run(a.slug, a.shot, a.rounds, a.probe, a.style)
 
 
 if __name__ == "__main__":
