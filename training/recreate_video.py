@@ -35,16 +35,24 @@ def expand(spec, n):
 MEASURED_HAIR_LOCKS = 10        # lock count for hair masses in whole-video runs (tune_hair_masses.py chose 8-16 on FF 27/50/32)
 
 
+LANDMARK_MIN_SCORE = 0.9          # anime-face-detector box score; below it a keyframe is not a measurement (FF 59: 0.55 on a
+                                 # title card; score < 0.9 shots gained nothing from the measured look on the whole trailer)
+
+
 def apply_character_look(spec, look):
     """look "proxy": rung 3/4 ellipsoids (the default). look "measured": every part drawn from measurements where the script
     has them -- face on the landmarks (face_from_landmarks), hair as the measured outline in the measured hair tones
-    (hair_masses), body unlit in its measured colour (flat_proxy). Parts without the measurement fall back to the proxy."""
+    (hair_masses), body unlit in its measured colour (flat_proxy). Landmark keyframes scoring below LANDMARK_MIN_SCORE are
+    dropped; with none left the shot keeps the lit proxy, since the flat body only belongs with a measured face."""
     if look != "measured" or not spec["character"]:
         return spec
-    keys = spec.get("landmark_keys") or []
+    keys = [k for k in spec.get("landmark_keys") or [] if isinstance(k.get("score"), (int, float)) and k["score"] >= LANDMARK_MIN_SCORE]
+    if not keys:
+        return {**spec, "landmark_keys": None, "landmarks": None}
+    landmarks = min(keys, key=lambda k: abs(k["frame"] - spec["frames"] // 2))["points"]
     has_hair = any(isinstance((k.get("hair_tones") or {}).get("dark_share"), (int, float)) for k in keys)
-    return {**spec, "face_from_landmarks": bool(spec.get("landmarks")), "hair_masses": bool(spec.get("outline") and spec.get("landmarks") and has_hair),
-            "flat_proxy": True}
+    return {**spec, "landmark_keys": keys, "landmarks": landmarks, "face_from_landmarks": True,
+            "hair_masses": bool(spec.get("outline") and has_hair), "flat_proxy": True}
 
 
 def run(slug, rounds=6, shots_spec="", out_name="video", look="proxy"):
