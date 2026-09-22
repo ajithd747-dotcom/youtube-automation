@@ -6,3 +6,4 @@ video_fragrant_v2 fragrant --rounds 6 --out video_v2
 video_fragrant_measured fragrant --rounds 6 --out video_measured --look measured
 video_fragrant_gated fragrant --rounds 6 --out video_gated --look measured
 video_fragrant_resegmented fragrant --rounds 6 --out video_resegmented --look measured
+video_bluebox_resegmented blue-box --rounds 6 --out video_resegmented
