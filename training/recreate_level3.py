@@ -52,6 +52,9 @@ PARAMS = {
     "exposure": ("add", 0.6, -6.0, 6.0),
     "bloom_strength": ("add", 0.3, 0.0, 2.0),
     "vignette": ("add", 0.15, 0.0, 0.9),
+    # contrast around the shot's median luma: the only parameter that can move luma_std and luma_p5, which lights on a
+    # flat backdrop cannot reach (see blender_level3.build_scene). 1.0 = no grade.
+    "contrast": ("mul", 1.25, 0.4, 3.0),
 }
 
 
@@ -115,7 +118,7 @@ def initial_params(script):
     return {"key_energy": 1.0, "fill_strength": 0.5,
             "key_screen_angle_deg": float(ang) if ang is not None else 270.0,
             "key_elevation_deg": 30.0,
-            "exposure": 0.0, "bloom_strength": 0.0,
+            "exposure": 0.0, "bloom_strength": 0.0, "contrast": 1.0,
             "vignette": float(np.clip(1.0 - vig, 0.0, 0.9)) if isinstance(vig, (int, float)) else 0.0,
             "exposure_offsets": {}}
 
@@ -193,17 +196,29 @@ def tune(spec, params, rounds, work, log):
     log.append({"round": 0, "error": round(best_err, 4), "per": {k: round(v, 3) for k, v in best_per.items()}, "params": params})
     scale = 1.0
     for rnd in range(1, rounds + 1):
-        cands = []
+        cands, labels = [], []
         for name in PARAMS:
             for d in (+scale, -scale):
                 cands.append(step(params, name, d))
+                labels.append(f"{name} {'+' if d > 0 else '-'}{scale:g}")
         cands.append(solve_exposure_offsets(spec, params, best_lights))
+        labels.append("exposure_offsets")
         results = evaluate(spec, cands, probe, work / "probe")
+        # A contrast move changes the mean luma, and the exposure-curve term (weighted double, scale 0.03) punishes that
+        # before the exposure fit gets its own turn: greedy single moves left contrast at 1.0 on 13 of the 14 Blue Box
+        # probe shots even though it is the only parameter that can reach luma_std and luma_p5. Judge each contrast move
+        # together with the exposure that answers it.
+        paired = [(c, lab, res) for c, lab, res in zip(cands, labels, results) if lab.startswith("contrast ")]
+        if paired:
+            compensated = [solve_exposure_offsets(spec, c, res[1]) for c, _, res in paired]
+            results = results + evaluate(spec, compensated, probe, work / "probe")
+            cands += compensated
+            labels += [f"{lab} + exposure" for _, lab, _ in paired]
         i = int(np.argmin([r[0][0] for r in results]))
         (err, per), lights = results[i]
         if err < best_err - 1e-4:
             params, best_err, best_per, best_lights = cands[i], err, per, lights
-            moved = "exposure_offsets" if i == len(cands) - 1 else f"{list(PARAMS)[i // 2]} {'+' if i % 2 == 0 else '-'}{scale:g}"
+            moved = labels[i]
         else:
             scale *= 0.5
             moved = f"no improvement -> step x{scale:g}"

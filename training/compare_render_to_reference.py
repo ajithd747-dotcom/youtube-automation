@@ -66,7 +66,7 @@ def collect_shot_rows(slug, run_name, stride, only_shots, workers):
     for shot in shots:
         if only_shots and shot["idx"] not in only_shots:
             continue
-        frames = range(shot["start"], shot["end"] + 1, stride)
+        frames = range(shot["start"], shot["end"], stride)       # end is exclusive: n = end - start
         ref_paths = [p for p in (ref_dir / f"f_{n + 1:05d}.jpg" for n in frames) if p.exists()]
         run_paths = [p for p in (run_dir / f"f_{n + 1:05d}.png" for n in frames) if p.exists()]
         if ref_paths and run_paths:

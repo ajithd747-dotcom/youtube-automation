@@ -572,13 +572,45 @@ def build_scene(sc, spec, width, height):
     blur.inputs["Size"].default_value = (0.2 * width, 0.2 * height)     # Blender 4.5: pixel size is a socket, not factor_x/y
     mix = nt.nodes.new("CompositorNodeMixRGB")
     mix.blend_type = "MULTIPLY"
+    # contrast grade on LUMINANCE ONLY: luma -> pivot * (luma / pivot) ** gamma, and the image is multiplied by the
+    # ratio, so every pixel keeps its colour ratios and only its brightness moves. Pivot = the shot's measured median
+    # luma, which leaves the exposure curve the tuner fits where it is while the tails move. Lights on a flat backdrop
+    # cannot make the reference's dark line art and shadow: renders came out 27% flat (luma_std 0.164 against 0.224,
+    # p5 lifted +0.093 on the Blue Box neutral-fill probe). Grading the channels instead of the luminance fixed that
+    # tone (luma_std error 2.62 -> 0.29 on BB 46) but amplified chroma with it (lab_b error 3.02 -> 8.25), for a worse
+    # score overall: a per-channel power raises the channel ratios, which is saturation.
+    luma = nt.nodes.new("CompositorNodeRGBToBW")
+    floor = nt.nodes.new("CompositorNodeMath")
+    floor.operation = "MAXIMUM"
+    floor.inputs[1].default_value = 1e-4                      # the ratio below divides by this
+    to_pivot = nt.nodes.new("CompositorNodeMath")
+    to_pivot.operation = "DIVIDE"
+    gamma = nt.nodes.new("CompositorNodeMath")
+    gamma.operation = "POWER"
+    from_pivot = nt.nodes.new("CompositorNodeMath")
+    from_pivot.operation = "MULTIPLY"
+    ratio = nt.nodes.new("CompositorNodeMath")
+    ratio.operation = "DIVIDE"
+    grade = nt.nodes.new("CompositorNodeMixRGB")
+    grade.blend_type = "MULTIPLY"
+    grade.inputs["Fac"].default_value = 1.0
     comp = nt.nodes.new("CompositorNodeComposite")
     nt.links.new(rl.outputs["Image"], glare.inputs["Image"])
     nt.links.new(ell.outputs["Mask"], blur.inputs["Image"])
     nt.links.new(glare.outputs["Image"], mix.inputs[1])
     nt.links.new(blur.outputs["Image"], mix.inputs[2])
-    nt.links.new(mix.outputs["Image"], comp.inputs["Image"])
-    return {"aspect": aspect, "character": subject if isinstance(subject, dict) else None, "cam": cam, "sun": sun, "bg": bg, "glare": glare, "vignette": mix, "subject": subject, "back_bsdf": back_bsdf}
+    nt.links.new(mix.outputs["Image"], luma.inputs["Image"])
+    nt.links.new(luma.outputs["Val"], floor.inputs[0])
+    nt.links.new(floor.outputs["Value"], to_pivot.inputs[0])
+    nt.links.new(to_pivot.outputs["Value"], gamma.inputs[0])
+    nt.links.new(gamma.outputs["Value"], from_pivot.inputs[0])
+    nt.links.new(from_pivot.outputs["Value"], ratio.inputs[0])
+    nt.links.new(floor.outputs["Value"], ratio.inputs[1])
+    nt.links.new(mix.outputs["Image"], grade.inputs[1])
+    nt.links.new(ratio.outputs["Value"], grade.inputs[2])
+    nt.links.new(grade.outputs["Image"], comp.inputs["Image"])
+    return {"aspect": aspect, "character": subject if isinstance(subject, dict) else None, "cam": cam, "sun": sun, "bg": bg, "glare": glare, "vignette": mix,
+            "contrast_gamma": gamma, "contrast_pivot": (to_pivot.inputs[1], from_pivot.inputs[1]), "subject": subject, "back_bsdf": back_bsdf}
 
 
 KEY_RADIUS = 9.0                # key light distance from the backdrop centre
@@ -593,6 +625,12 @@ def aim_key(key, screen_angle_deg, elevation_deg):
     key.location = toward_light * KEY_RADIUS
 
 
+def median_target_luma(spec):
+    """Display-referred median of the shot's measured exposure curve -- the luma the render is fitted to hold."""
+    lumas = sorted(float(k["luma"]) for k in spec["exposure_keys"])
+    return lumas[len(lumas) // 2] if lumas else 0.5
+
+
 def apply_candidate(sc, obj, spec, p):
     aim_key(obj["sun"], p["key_screen_angle_deg"], p["key_elevation_deg"])
     obj["sun"].data.energy = p["key_energy"] * KEY_ENERGY_W
@@ -601,6 +639,10 @@ def apply_candidate(sc, obj, spec, p):
     obj["glare"].inputs["Strength"].default_value = p["bloom_strength"]
     obj["glare"].inputs["Threshold"].default_value = 0.8
     obj["vignette"].inputs["Fac"].default_value = p["vignette"]
+    pivot = max(0.02, srgb_to_linear([median_target_luma(spec)])[0])       # compositor works on linear scene values
+    for sock in obj["contrast_pivot"]:
+        sock.default_value = pivot
+    obj["contrast_gamma"].inputs[1].default_value = p.get("contrast", 1.0)
     if obj["character"]:
         place_character(obj["character"], spec["subject_bbox_xywh"], p.get("shape"), obj["aspect"], spec.get("outline"))
         if "_features" in obj["character"]:
