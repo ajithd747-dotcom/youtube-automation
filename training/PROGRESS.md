@@ -550,5 +550,5 @@ Fragrant, --look measured with the score gate, frame ranges (lpips on all frames
 
 Old S34's frames go from the worst of the four runs to the best on all three metrics; the wide shot now carries its own
 small face instead of the close-up's giant one (compare/resegmented.jpg). Best whole-trailer lpips so far. Open: the
-profile face is crude, and the empty corridor (new S46) shows a stray pink sphere in every run -- a character proxy
-placed on a shot the vision pass says has no character, to look at next.
+profile face is crude, and the empty corridor (new S46) shows a stray pink sphere in every run. Not the character proxy (its spec
+has character=None); origin not yet traced, to look at next.
