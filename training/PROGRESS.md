@@ -605,3 +605,23 @@ The close-up now gets its own muted pink-beige grade instead of sharing the laug
 The laughing shot looks almost the same but tuned more orange: hist 0.551 -> 0.340, dhue 10.9 -> 13.2, structure and
 lpips unchanged. That is the light tuner on a 10-frame shot (it minimises the measured feature error, not hist), not
 the segmentation.
+
+## 2026-09-22 -- the world fill light doubled every colour; now neutral at the measured luma
+
+The laughing shot (BB 75) looked "tuned more orange". The tuner has no colour parameter at all (PARAMS: light energy,
+direction, exposure, bloom, vignette), so lab_a/lab_b in feature_error are scored but unreachable. Colour comes from
+the measured region colours on the materials -- and the world background, which is the fill light, was also set to
+world_rgb, lighting already-coloured surfaces with that colour. Renders were 1.48x the script's chroma on Blue Box
+(81 of 86 shots) and 1.24x on Fragrant (52 of 65). Same tuned lights, world light grey at the same luma: BB 74 lab a/b
+16.0/19.9 -> 10.6/15.0 (target 10.4/11.7), BB 75 28.7/37.6 -> 17.0/29.9 (target 15.8/27.4).
+blender_level3.neutral_of now feeds the fill. Probe (hard-linked copy of each latest run, 12-14 evenly spaced shots
+re-rendered and re-tuned, run encoded and scored whole -- runs/*/probe_neutral_fill):
+
+| probed shots | chroma / script | dhue | hist | frame_score | grad holdout | lpips |
+|---|---|---|---|---|---|---|
+| BB 14 shots, 382 frames | 1.48 -> 1.10 | 11.41 -> 10.11 | 0.498 -> 0.482 | 0.403 -> 0.406 | 0.425 -> 0.427 | 0.398 -> 0.401 |
+| FF 12 shots, 419 frames | 1.33 -> 1.15 | 6.46 -> 5.82 | 0.536 -> 0.527 | 0.489 -> 0.489 | 0.486 -> 0.487 | 0.517 -> 0.518 |
+
+The bias is mostly gone and hue error falls ~10 %; the score barely moves (lpips better on 10/14 BB shots, 5/12 FF),
+hist dips slightly. Kept: colour now follows the script, no holdout falls. Remaining chroma excess (1.10-1.15x) is
+unexplained. The tuner still cannot act on its own colour error -- a grade parameter would be the next knob.

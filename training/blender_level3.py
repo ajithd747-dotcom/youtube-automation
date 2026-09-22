@@ -38,6 +38,14 @@ def rgb_lin(rgb_uint8, gain=1.0):
     return [min(max(v * gain, 0.0), 1.0) for v in srgb_to_linear([x / 255.0 for x in rgb_uint8])]
 
 
+def neutral_of(rgb_uint8):
+    """Grey with the same luma (Rec. 709) as rgb. The world light is fill, and every surface it lights already carries a
+    measured colour: tinting the fill too applied the colour twice (renders 1.48x the script's chroma on Blue Box, 1.24x
+    on Fragrant; BB 75 lab a/b 28.7/37.6 against 15.8/27.4, 17.0/29.9 with a neutral fill)."""
+    y = int(round(0.2126 * rgb_uint8[0] + 0.7152 * rgb_uint8[1] + 0.0722 * rgb_uint8[2]))
+    return [y, y, y]
+
+
 def view_size_at(distance, aspect):
     w = SENSOR_MM / LENS_MM * distance
     return w, w / aspect
@@ -588,7 +596,7 @@ def aim_key(key, screen_angle_deg, elevation_deg):
 def apply_candidate(sc, obj, spec, p):
     aim_key(obj["sun"], p["key_screen_angle_deg"], p["key_elevation_deg"])
     obj["sun"].data.energy = p["key_energy"] * KEY_ENERGY_W
-    obj["bg"].inputs["Color"].default_value = (*rgb_lin(spec["world_rgb"]), 1.0)
+    obj["bg"].inputs["Color"].default_value = (*rgb_lin(neutral_of(spec["world_rgb"])), 1.0)
     obj["bg"].inputs["Strength"].default_value = p["fill_strength"]
     obj["glare"].inputs["Strength"].default_value = p["bloom_strength"]
     obj["glare"].inputs["Threshold"].default_value = 0.8
