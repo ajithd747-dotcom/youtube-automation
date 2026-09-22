@@ -513,15 +513,16 @@ def main():
         seen = script["semantic"]["characters"]                       # vision pass: list of characters, [] = none seen, NM = not run
         outline = next((k["polygon"] for k in sorted(ch.get("silhouette_outline", {}).get("keyframes", []), key=lambda k: abs(k["frame"] - (sh["end"] - sh["start"]) // 2))
                         if isinstance(k["polygon"], list)), None)
-        if faces and isinstance(ch["frames_with_face_share"], (int, float)) and ch["frames_with_face_share"] >= 0.5:
+        if isinstance(seen, list) and not seen:
+            box, src = None, None                                     # the vision pass saw no character: no subject proxy, even
+                                                                      # when the cascade reports a face (FF 46: sinks in an empty corridor)
+        elif faces and isinstance(ch["frames_with_face_share"], (int, float)) and ch["frames_with_face_share"] >= 0.5:
             box, src = list(np.median(np.array(faces, float), axis=0)), "characters.face_track (median largest face)"
         elif isinstance(seen, list) and seen and lm_keys:
             mid = min(lm_keys, key=lambda k: abs(k["frame"] - (sh["end"] - sh["start"]) // 2))
             box, src = mid["bbox_xywh"], "characters.face_landmarks (anime-face-detector box; the cascade found no face)"
         elif isinstance(seen, list) and seen and outline:
             box, src = head_box_from_outline(outline, meta), "characters.silhouette_outline (head box derived from the measured outline; face detector found none)"
-        elif isinstance(seen, list) and not seen:
-            box, src = None, None                                     # the vision pass saw no character: no subject proxy
         elif isinstance(co["subject_bbox_median"], list) and None not in co["subject_bbox_median"]:
             box, src = co["subject_bbox_median"], "composition.subject_bbox_median (saliency)"
         else:

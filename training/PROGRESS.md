@@ -552,3 +552,15 @@ Old S34's frames go from the worst of the four runs to the best on all three met
 small face instead of the close-up's giant one (compare/resegmented.jpg). Best whole-trailer lpips so far. Open: the
 profile face is crude, and the empty corridor (new S46) shows a stray pink sphere in every run. Not the character proxy (its spec
 has character=None); origin not yet traced, to look at next.
+
+## 2026-09-22 -- the pink sphere on FF 46 (empty corridor): a cascade false face became the subject proxy
+
+Traced: blender_level3 places a generic "subject" ellipsoid whenever colour.regions has a subject box. For FF 46 that
+box came from characters.face_track -- lbpcascade reports a "face" on 100 % of frames, on the sink taps (box x 0.18,
+y 0.62; compare/s46_sphere.jpg). write_shot_scripts.py had the rule "vision pass saw no character -> no subject proxy",
+but after the face-track branch, so it never ran when the cascade fired. Now checked first. Only FF 46 changes in the
+five references (diffed every shot script before/after; Blue Box, mid-run, unchanged). The Sparkle scripts were stale
+(written before colour.regions existed) and are now current -- no Sparkle run is affected.
+Same tuned lights, sphere removed: frame_score 0.456 -> 0.452, lpips 0.289 -> 0.273 on 19 frames. The sphere scored
+slightly better by accident, standing in for the pale sinks under it; kept the fix, since a character proxy on a shot
+with no character is not a measurement of anything. Scene props (sinks, windows) are the real gap on empty shots.
