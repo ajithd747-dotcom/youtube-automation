@@ -525,3 +525,30 @@ a real low-confidence face from a false one. Gate kept (whole-trailer lpips hold
 not a clear win. Next: reject keyframes whose face box disagrees with the shot's other keyframes and with
 colour.regions.subject_bbox (cut-boundary spill), and only apply a keyframe to frames near it instead of holding one
 keyframe for the whole shot.
+
+## 2026-09-22 -- missed cuts fixed (isolated structural cuts), all references resegmented; Fragrant re-run
+
+S34's regression under the score gate was not a detection fault: S34 was two shots. The cut at 1268 (profile close-up
+-> wide booth shot) was detected raw but folded away by merge_similar's min_len (9 frames after the cut at 1259), and
+1698 (stairwell -> corridor, same colours) failed the histogram test (0.39 < 0.6) despite the largest frame jump in the
+trailer. ingest_reference.detect_isolated_cuts now keeps any jump with mad > 22 whose neighbours stay under 30 % of it
+and whose blurred-gray correlation is < 0.3 (real missed cuts measured <= 0.22, a redrawn close-up 0.43). It adds 9
+cuts across 4 references -- FF 1268, 1698; Blue Box 613, 2184, 2201; Silent Voice 704; Garden of Words 1182 -- each
+checked by eye; FF 809 (drawing change) is rejected, Blue Box 2165 (ncc 0.45) is still missed.
+training/resegment_shots.py carried per-shot files over (unsplit shots verified identical to the backups in
+<reference>/backup_pre_resegment_20260922/), split shots were re-measured (outlines, landmarks, line art) and
+re-described from their own contact sheets. Shot indices after the first new cut differ from all earlier runs.
+
+Fragrant, --look measured with the score gate, frame ranges (lpips on all frames):
+
+| frames | v2 fs / grad / lpips | measured | gated | resegmented |
+|---|---|---|---|---|
+| whole trailer | 0.462 / 0.503 / 0.470 | 0.486 / 0.480 / 0.491 | 0.483 / 0.480 / 0.493 | 0.484 / 0.481 / **0.495** |
+| 1259-1267 (profile close-up) | 0.524 / 0.541 / 0.549 | 0.547 / 0.522 / 0.606 | 0.578 / 0.505 / 0.614 | **0.630 / 0.647 / 0.677** |
+| 1268-1322 (wide booth) | 0.531 / 0.692 / 0.579 | 0.517 / 0.659 / 0.593 | 0.489 / 0.601 / 0.525 | 0.531 / 0.658 / **0.609** |
+| 1680-1716 (stairwell, corridor) | 0.456 / 0.398 / 0.375 | same | same | 0.459 / 0.377 / 0.389 |
+
+Old S34's frames go from the worst of the four runs to the best on all three metrics; the wide shot now carries its own
+small face instead of the close-up's giant one (compare/resegmented.jpg). Best whole-trailer lpips so far. Open: the
+profile face is crude, and the empty corridor (new S46) shows a stray pink sphere in every run -- a character proxy
+placed on a shot the vision pass says has no character, to look at next.
