@@ -583,3 +583,25 @@ for both runs. Frames outside the split shots score identically, so the differen
 5 of 6 new shots gain on lpips and frame_score, S14 (old worst shot, 0.279) leaves the worst list. The gradient
 holdout falls on the 9-frame brown-haired-boy shot (0.387 -> 0.267). The whole trailer moves little because the split
 shots are 3 % of its frames. Frames not looked at for this run; Fragrant's split was checked by eye.
+
+## 2026-09-22 -- BB 2165: isolated jump with a raw-cut colour change is a cut; Blue Box re-run
+
+2165 (eye close-up -> girl laughing outdoors) passes the raw detector (hist 1.45, mad 44.7) but comes 9 frames after
+the cut at 2156, so merge_similar's min_len folded it -- same fault as FF 1268 -- and its correlation (0.45) failed the
+isolated-cut rule. detect_isolated_cuts now also keeps an isolated jump whose histogram distance exceeds 0.6
+(make_script's own hist_th; every redraw measured <= 0.26). Adds exactly BB 2165 and Sparkle 9287 (snowy building ->
+city at night), both checked by eye; nothing else moves in the five references. resegment_shots.py backups are now
+timestamped (backup_pre_resegment_20260922-1207).
+
+Blue Box video_resegmented2 (2 h 34 min); frames outside 2156-2174 identical to video_resegmented:
+
+| frames | before fs / grad / lpips | split |
+|---|---|---|
+| 2156-2164 eye close-up | 0.319 / 0.248 / 0.392 | **0.505** / 0.237 / **0.426** |
+| 2165-2174 laughing | 0.420 / 0.214 / 0.442 | 0.359 / 0.214 / 0.442 |
+| whole trailer | 0.433 / 0.428 / 0.415 | 0.434 / 0.428 / 0.415 |
+
+The close-up now gets its own muted pink-beige grade instead of sharing the laughing shot's orange (split_2165.jpg).
+The laughing shot looks almost the same but tuned more orange: hist 0.551 -> 0.340, dhue 10.9 -> 13.2, structure and
+lpips unchanged. That is the light tuner on a 10-frame shot (it minimises the measured feature error, not hist), not
+the segmentation.
