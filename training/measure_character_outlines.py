@@ -7,6 +7,7 @@ region -> outer contour simplified to <= 40 points (frame fractions). A shot who
 NOT MEASURED (the model misses small full-body figures in wide shots). Writes training/reference/<slug>/character_outlines.json,
 merged into the shot script by write_shot_scripts.py as characters.silhouette_outline.
 """
+import argparse
 import json
 import os
 import sys
@@ -63,7 +64,11 @@ def outline_polygon(prob):
 
 
 def main():
-    frag = sys.argv[1]
+    ap = argparse.ArgumentParser()
+    ap.add_argument("slug")
+    ap.add_argument("--shots", default="", help="comma list; measured into the existing file, other shots kept")
+    a = ap.parse_args()
+    frag = a.slug
     hits = [p for p in (HERE / "reference").iterdir() if p.is_dir() and frag in p.name]
     if len(hits) != 1:
         sys.exit(f"'{frag}' matches {[h.name for h in hits]}")
@@ -72,8 +77,13 @@ def main():
     x0, y0, x1, y1 = meta["content_rect_640"]
     shots = json.loads((D / "shots.json").read_text(encoding="utf-8"))["shots"]
     sess = load_session()
-    out = {"model": "/".join(MODEL), "threshold": THRESHOLD, "units": "frame fractions (x right, y down), content area", "shots": {}}
+    wanted = {int(x) for x in a.shots.split(",") if x.strip()}
+    path = D / "character_outlines.json"
+    out = json.loads(path.read_text(encoding="utf-8")) if wanted and path.exists() else {"shots": {}}
+    out.update({"model": "/".join(MODEL), "threshold": THRESHOLD, "units": "frame fractions (x right, y down), content area"})
     for s in shots:
+        if wanted and s["idx"] not in wanted:
+            continue
         keys = sorted({s["start"], (s["start"] + s["end"] - 1) // 2, s["end"] - 1})
         entry = []
         for f in keys:
@@ -82,8 +92,8 @@ def main():
             entry.append({"frame": f - s["start"], "foreground_share": round(share, 4), "polygon": poly if poly else "NOT MEASURED"})
         out["shots"][str(s["idx"])] = entry
         print(f"shot {s['idx']}: " + " ".join(f"{e['foreground_share']:.2f}" for e in entry), flush=True)
-    (D / "character_outlines.json").write_text(json.dumps(out), encoding="utf-8")
-    print(f"-> {D / 'character_outlines.json'}")
+    path.write_text(json.dumps(out), encoding="utf-8")
+    print(f"-> {path}")
 
 
 if __name__ == "__main__":
