@@ -501,3 +501,27 @@ mass in the right places. Kept as the whole-video look. Three failure modes, eac
   the lit ellipsoid there.
 Next: gate measured parts on detection confidence (face score, outline area vs. frame), fall back to the v2 proxy below
 it, then re-run the trailer.
+
+## 2026-09-22 -- landmark score gate (>= 0.9) on the whole trailer: a wash overall, fixes two shots, breaks two
+
+video_gated = video_measured + two rules in apply_character_look: landmark keyframes scoring < 0.9 dropped (none left ->
+lit proxy), flat body only with a measured face. lpips on all 2649 frames for all three runs.
+
+| run | frame_score | grad holdout | lpips |
+|---|---|---|---|
+| video_v2 (proxy) | 0.462 | 0.503 | 0.470 |
+| video_measured | **0.486** | 0.480 | 0.491 |
+| video_gated | 0.483 | 0.480 | **0.493** |
+
+Only the 13 shots the gate changed differ (others within 0.0016 frame_score). On those 570 frames lpips
+v2 0.495 / measured 0.483 / gated 0.490, so the gate recovers most of the measured look's loss on low-confidence shots
+but not all of it. Per shot (lpips, measured -> gated): S59 title card 0.484 -> 0.545, S46 profile 0.557 -> 0.597, S30
+0.439 -> 0.439, S38 0.412 -> 0.426 -- fixed. S18 0.557 -> 0.473 (back of head, all keyframes ~0.77: the measured face
+was a jumble of shards and still beat the ball proxy), S34 0.595 -> 0.537 -- worse. Frames: compare/gated.jpg.
+S34 is a gate fault, not noise: its only passing keyframe is frame 0 (score 0.999, face box 0.30 x 0.66 of the frame),
+the tail of the previous close-up, while the booth shot's real face is the 0.625 keyframe at frame 31 (box 0.06 x 0.14).
+Keeping the passing keyframe and holding it for 64 frames placed a giant face on a wide shot. Score alone cannot tell
+a real low-confidence face from a false one. Gate kept (whole-trailer lpips holds, the two visible faults are gone),
+not a clear win. Next: reject keyframes whose face box disagrees with the shot's other keyframes and with
+colour.regions.subject_bbox (cut-boundary spill), and only apply a keyframe to frames near it instead of holding one
+keyframe for the whole shot.
