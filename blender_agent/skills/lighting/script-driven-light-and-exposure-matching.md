@@ -22,14 +22,17 @@ tags:
 - compositor
 source:
 - 'own-experience: rung 3 of training/SPEC.md on Fragrant Flower shot 27 and Blue Box shots 77 and 1, 2026-09-21 (training/PROGRESS.md)'
-version: 1
+version: 2
 ---
 ## Procedure
 
 1. Key = POINT light (not sun) placed off-screen toward the script's `lighting.key_direction_screen_deg` (0 = right, 90 = down),
    9 units from a backdrop 10 units from the camera. A sun lights a flat backdrop evenly and cannot produce a screen-space
    gradient; the point light's falloff does. Measured round trip: requested 0/90/180/270 deg -> measured 0/90/180/270.
-2. Fill = world background, colour = middle-band colour, strength tuned.
+2. Fill = world background, colour = NEUTRAL GREY at the middle-band colour's Rec. 709 luma (`blender_level3.neutral_of`),
+   strength tuned. Never tint the fill with the measured colour: every surface it lights already carries a measured
+   colour, so a tinted fill applies it twice -- renders came out 1.48x the script's chroma on Blue Box (81 of 86 shots),
+   1.24x on Fragrant. Neutral fill: 1.10x / 1.15x, hue error -10 %, holdouts unchanged (2026-09-22).
 3. Exposure: key `scene.view_settings.exposure` at every `lighting.exposure_luma.keyframes` frame. Correct each key by
    `0.7 * 2.2 * log2(target_luma / rendered_luma)` stops, keep the offsets zero-mean and move the mean into the base exposure.
 4. Vignette (Blender 4.5 compositor): Ellipse Mask Size (0.95, 0.95) -> Blur, Size socket = 0.2 x frame size in px -> Mix
@@ -54,3 +57,5 @@ frame_score and holdout are never tuned against; both rose.
 
 The subject proxy is one ellipsoid coloured from the face box, which is wrong for dark-haired characters (renders pale).
 Highlight p95 and vignette stay the largest residuals: a flat diffuse scene has no small bright highlights.
+The tuner has no colour parameter: lab_a/lab_b are in the feature error but no tuned value can move them, so colour is
+only as right as the measured material colours and a neutral fill make it. A grade parameter is the missing knob.

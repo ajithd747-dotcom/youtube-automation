@@ -10,3 +10,5 @@ video_bluebox_resegmented blue-box --rounds 6 --out video_resegmented
 video_bluebox_resegmented2 blue-box --rounds 6 --out video_resegmented2
 probe_bluebox_neutral_fill blue-box --rounds 6 --out probe_neutral_fill
 probe_fragrant_neutral_fill fragrant --rounds 6 --out probe_neutral_fill --look measured
+video_fragrant_neutral_fill fragrant --rounds 6 --out video_neutral_fill --look measured
+video_bluebox_neutral_fill blue-box --rounds 6 --out video_neutral_fill
