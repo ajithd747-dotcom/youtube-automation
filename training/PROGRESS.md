@@ -564,3 +564,22 @@ five references (diffed every shot script before/after; Blue Box, mid-run, uncha
 Same tuned lights, sphere removed: frame_score 0.456 -> 0.452, lpips 0.289 -> 0.273 on 19 frames. The sphere scored
 slightly better by accident, standing in for the pale sinks under it; kept the fix, since a character proxy on a shot
 with no character is not a measurement of anything. Scene props (sinks, windows) are the real gap on empty shots.
+
+## 2026-09-22 -- Blue Box re-run on the resegmented shots (3 new cuts)
+
+`recreate_video.py blue-box --rounds 6` (proxy look, as the 2026-09-21 run 'video'), 2 h 35 min. lpips on all frames
+for both runs. Frames outside the split shots score identically, so the differences below are the split alone.
+
+| frames | old fs / grad / lpips | resegmented |
+|---|---|---|
+| 604-612 brown-haired boy (was start of S14) | 0.246 / 0.387 / 0.381 | 0.453 / 0.267 / 0.466 |
+| 613-654 smash | 0.286 / 0.218 / 0.363 | 0.320 / 0.219 / 0.390 |
+| 2175-2183 phone | 0.402 / 0.343 / 0.469 | 0.430 / 0.328 / 0.495 |
+| 2184-2191 golden light | 0.263 / 0.418 / 0.269 | 0.389 / 0.403 / 0.481 |
+| 2192-2200 close-up | 0.462 / 0.320 / 0.502 | 0.460 / 0.330 / 0.480 |
+| 2201-2209 pair | 0.604 / 0.717 / 0.691 | 0.695 / 0.807 / 0.777 |
+| whole trailer | 0.431 / 0.428 / 0.413 | 0.433 / 0.428 / 0.415 |
+
+5 of 6 new shots gain on lpips and frame_score, S14 (old worst shot, 0.279) leaves the worst list. The gradient
+holdout falls on the 9-frame brown-haired-boy shot (0.387 -> 0.267). The whole trailer moves little because the split
+shots are 3 % of its frames. Frames not looked at for this run; Fragrant's split was checked by eye.
