@@ -82,19 +82,24 @@ ISOLATED_CUT_MAD = 22.0          # same mean-abs-difference floor as make_script
 ISOLATED_CUT_NEIGHBOUR_SHARE = 0.3  # both frame differences either side stay below this share of the jump
 ISOLATED_CUT_MAX_NCC = 0.3       # blurred-gray correlation across the jump; real missed cuts measured <= 0.22, a
                                  # redrawn close-up inside a shot 0.43 (FF 809) -- checked by eye on Fragrant and Blue Box
+ISOLATED_CUT_MIN_HIST = 0.6      # ... or the colour histogram jumps like a raw cut (make_script.detect_cuts hist_th): BB 2165
+                                 # (correlation 0.45, histogram 1.45) was folded away by min_len; redraws measured <= 0.26
 
 
 def detect_isolated_cuts(small):
-    """Cuts the colour-histogram test misses or merge_similar folds away: one frame whose picture changes structurally
-    while the frames around it hold (a cut inside the same room -- FF 1698 -- or a short shot less than min_len after
-    the previous cut -- FF 1268). Runs of flashes and fast action are not isolated, so they are not caught here."""
+    """Cuts the colour-histogram test misses or merge_similar folds away: one frame whose picture changes structurally or
+    in colour while the frames around it hold (a cut inside the same room -- FF 1698 -- or a short shot less than min_len
+    after the previous cut -- FF 1268, BB 2165). Runs of flashes and fast action are not isolated, so they are not caught."""
+    import make_script as MS
+    hs = MS.hists(small)
     gray = [cv2.GaussianBlur(cv2.cvtColor(im, cv2.COLOR_BGR2GRAY).astype(np.float32), (0, 0), 2) for im in small]
     mad = np.array([0.0] + [float(np.abs(small[i - 1].astype(np.int16) - small[i].astype(np.int16)).mean()) for i in range(1, len(small))])
     cuts = []
     for i in range(2, len(small) - 2):
         if mad[i] <= ISOLATED_CUT_MAD or max(mad[i - 2:i].max(), mad[i + 1:i + 3].max()) >= ISOLATED_CUT_NEIGHBOUR_SHARE * mad[i]:
             continue
-        if float(np.corrcoef(gray[i - 1].ravel(), gray[i].ravel())[0, 1]) < ISOLATED_CUT_MAX_NCC:
+        if (float(np.corrcoef(gray[i - 1].ravel(), gray[i].ravel())[0, 1]) < ISOLATED_CUT_MAX_NCC
+                or float(np.abs(hs[i - 1] - hs[i]).sum()) > ISOLATED_CUT_MIN_HIST):
             cuts.append(i)
     return cuts
 

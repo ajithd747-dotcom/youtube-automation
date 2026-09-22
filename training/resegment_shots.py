@@ -8,7 +8,7 @@ shot. A new shot equal to an old one keeps that shot's entries under its new ind
 its measurements (outlines, landmarks, line art) must be re-measured and its semantic layer re-filled by a vision pass,
 since a description of the whole old shot is not a description of either half. Per-shot files handled: semantic.json,
 face_landmarks.json, character_outlines.json, line_art.json. shots/, sheets/ and script.json are rebuilt afterwards by
-write_shot_scripts.py. Before writing, the old files are copied to <reference>/backup_pre_resegment_<date>/.
+write_shot_scripts.py. Before writing, the old files are copied to <reference>/backup_pre_resegment_<date-time>/.
 """
 import argparse
 import datetime
@@ -57,7 +57,7 @@ def resegment(D, apply):
     print(f"  per-shot files: {present}; to re-measure / re-describe: new shots {split_new}")
     if not split or not apply:
         return split_new
-    backup = D / f"backup_pre_resegment_{datetime.date.today():%Y%m%d}"
+    backup = D / f"backup_pre_resegment_{datetime.datetime.now():%Y%m%d-%H%M}"
     if backup.exists():
         sys.exit(f"{backup} exists -- refusing to overwrite a backup")
     backup.mkdir()
