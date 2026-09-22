@@ -2,7 +2,7 @@
 
     .venv/bin/python training/rescore_perceptual.py <slug> <run dir under training/runs/<slug>/> [...]
 
-For each run dir holding rendered/ frames and a scores.json (written by score_recreation.py), scores every rendered frame
+For each run dir holding rendered/ (shot run) or frames/ (whole video) frames and a scores.json (written by score_recreation.py), scores every rendered frame
 against its reference frame with score_recreation.lpips_similarity (same masking), stores lpips_holdout per frame and in
 scores.json "overall", and prints frame_score / grad_ssim_holdout / lpips_holdout side by side.
 """
@@ -23,7 +23,10 @@ def rescore_run(D, run_dir, rect, sub_flags):
     scores_path = run_dir / "scores.json"
     sc = json.loads(scores_path.read_text(encoding="utf-8"))
     start = sc.get("reference_start", 0)
-    rendered = sorted((run_dir / "rendered").glob("f_*.png"))
+    # shot runs keep frames in rendered/, whole-video runs (recreate_video.py) in frames/
+    rendered = sorted((run_dir / "rendered").glob("f_*.png")) or sorted((run_dir / "frames").glob("f_*.png"))
+    if not rendered:
+        sys.exit(f"{run_dir}: no f_*.png in rendered/ or frames/ -- nothing to score")
     for r in sc["frames"]:
         i = r["frame"] - start
         if r.get("missing") or i >= len(rendered):

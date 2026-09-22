@@ -476,3 +476,28 @@ light tone [86,83,103] is the wall. `face_geometry.hair_region` now limits hair 
 centre and 1.5 face heights above the brows -- too loose to fix 27 (unchanged at 0.490), kept as a guard; no per-shot
 fitting. Verdict left to the whole trailer: recreate_video.py --look measured (face / hair / body from measurements
 where the script has them, lights tuned with those parts in place, 10 locks).
+
+## 2026-09-22 -- whole trailer with the measured character look: a win on character shots, three failure modes
+
+`recreate_video.py fragrant --rounds 6 --look measured` (queue job video_fragrant_measured, 1 h 43 min) vs video_v2
+(same pipeline, ellipsoid proxy). lpips_holdout on all 2649 frames for both (rescore_perceptual.py; it now reads frames/
+for whole-video runs -- before, it silently wrote 0.0 per frame when rendered/ was absent, and now it exits instead).
+
+| shots | frames | v2 frame_score / grad / lpips | measured |
+|---|---|---|---|
+| whole trailer | 2649 | 0.462 / 0.503 / 0.470 | **0.486** / 0.480 / **0.491** |
+| 43 with measured parts | 1662 | 0.471 / 0.462 / 0.471 | **0.509** / 0.426 / **0.505** |
+| 20 without character | 987 | 0.446 / 0.571 / 0.469 | unchanged |
+
+lpips rose on 34 of the 43 shots (largest S14 +0.209, S32 +0.144, S50 +0.111). The gradient holdout fell by 0.036, about
+calibration noise for "right shapes, a few px off". Split verdict, so I looked at the frames (compare/v2_vs_measured.jpg,
+middle frame of S59/46/49/14/32/31). On face shots the measured look is plainly closer: eyes, brows, hair colour and
+mass in the right places. Kept as the whole-video look. Three failure modes, each a measurement fault, not a rendering one:
+- **S59 title card (lpips -0.063)**: a tiny character with a face was placed on a watercolour title card that has no
+  character in it. Character detection gives a false positive on text/texture shots.
+- **S49 (grad -0.160)**: face landmarks rotated and the hair region fanned out as radial wedges across the frame; the
+  character is half off-screen, hand over face.
+- **S46 profile (lpips -0.040)**: no landmarks on a side view, so it falls back to the flat proxy, which is worse than
+  the lit ellipsoid there.
+Next: gate measured parts on detection confidence (face score, outline area vs. frame), fall back to the v2 proxy below
+it, then re-run the trailer.
