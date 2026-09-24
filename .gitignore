@@ -6,6 +6,7 @@
 *.pem
 **/credentials.json
 **/token.json
+**/client_secret*.json
 
 # ---------------------------------------------------------------- other people's content
 # Downloaded reference clips used for study and benchmarking. They are someone else's
