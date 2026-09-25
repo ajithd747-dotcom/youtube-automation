@@ -625,3 +625,20 @@ re-rendered and re-tuned, run encoded and scored whole -- runs/*/probe_neutral_f
 The bias is mostly gone and hue error falls ~10 %; the score barely moves (lpips better on 10/14 BB shots, 5/12 FF),
 hist dips slightly. Kept: colour now follows the script, no holdout falls. Remaining chroma excess (1.10-1.15x) is
 unexplained. The tuner still cannot act on its own colour error -- a grade parameter would be the next knob.
+
+## 2026-09-22 -- contrast grade probe on Blue Box (written up 2026-09-25)
+
+Same 14 probe shots as the neutral-fill probe (runs/blue-box.../probe_contrast, hard-linked from video_neutral_fill,
+re-tuned 6 rounds with the luminance-only contrast parameter paired with exposure). Per-frame scores over each probed
+shot's frame range, against video_neutral_fill:
+
+| 382 probed frames | frame_score | hist | dhue | grad holdout | lpips (40 sampled frames) |
+|---|---|---|---|---|---|
+| video_neutral_fill | 0.406 | 0.482 | 10.11 | 0.427 | 0.397 |
+| probe_contrast | **0.419** | **0.536** | 10.14 | 0.431 | 0.397 |
+
+Contrast moved off 1.0 on 10 of 14 shots (0.8 to 1.56, bounds 0.4-3.0 never reached). frame_score up on 9, hist on 8,
+grad holdout on 8; the biggest gains are the shots with the darkest references (BB 2 hist 0.28 -> 0.38, BB 31
+0.49 -> 0.64, BB 68 0.43 -> 0.58). lpips is flat and hue unchanged -- the grade fixes tone distribution, not structure.
+Whole trailer: frame_score 0.442 -> 0.444, hist 0.523 -> 0.531, no holdout falls. Kept; full runs of both trailers
+queued (video_bluebox_contrast, video_fragrant_contrast).
